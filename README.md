@@ -141,28 +141,73 @@ Unapproved pull requests may be closed to maintain code quality.
 
 ---
 
+---
+
 ## 🚀 Quick Start
 
-### Prerequisites
+Get **DocuHub** up and running locally in just a few minutes.
 
-- Node.js 18+ and npm/yarn/pnpm
-- Modern browser with WebAssembly support
+---
 
-### Installation
+### 📦 Prerequisites
+
+Make sure you have the following installed on your system:
+
+* **Node.js** `v18+`
+* **Package manager**: `npm`, `yarn`, or `pnpm` (recommended)
+* A **modern web browser** with **WebAssembly (WASM)** support
+
+> 💡 Tip: Check your Node version using `node -v`
+
+---
+
+### ⚙️ Installation & Setup
+
+Follow these steps to run DocuHub locally:
+
 ```bash
 # Clone the repository
 git clone https://github.com/R3ACTR/DocuHub.git
-cd docuhub
+
+# Navigate to the project directory
+cd DocuHub
 
 # Install dependencies
 pnpm install
 
-# Start development server
+# Start the development server
 pnpm run dev
 ```
 
-Visit `http://localhost:3000` to see DocuHub in action!
+---
 
+### 🌐 Run the App
+
+Once the server starts, open your browser and visit:
+
+```
+http://localhost:3000
+```
+
+You should now see **DocuHub** running locally 🎉
+
+---
+
+### 🛠️ Alternative Package Managers
+
+If you prefer `npm` or `yarn`, you can use:
+
+```bash
+# npm
+npm install
+npm run dev
+
+# yarn
+yarn install
+yarn dev
+```
+
+---
 ### Build for Production
 ```bash
 # Create optimized production build
