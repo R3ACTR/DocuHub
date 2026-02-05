@@ -61,16 +61,21 @@ export default function Dashboard() {
               </div>
             </label>
             
-            {fileInfo && (
-              <div className="mt-4 w-full max-w-md rounded-lg border border-border bg-card p-4 text-left shadow-sm">
-                <div className="grid grid-cols-2 gap-2 text-sm">
-                  <span className="font-semibold">Name:</span> <span>{fileInfo.name}</span>
-                  <span className="font-semibold">Size:</span> <span>{fileInfo.size}</span>
-                  <span className="font-semibold">Type:</span> <span>{fileInfo.type || "Unknown"}</span>
-                  <span className="font-semibold">Modified:</span> <span>{fileInfo.lastModified}</span>
-                </div>
-              </div>
-            )}
+            {fileInfo ? (
+  <div className="mt-4 w-full max-w-md rounded-lg border border-border bg-card p-4 text-left shadow-sm">
+    <div className="grid grid-cols-2 gap-2 text-sm">
+      <span className="font-semibold">Name:</span> <span>{fileInfo.name}</span>
+      <span className="font-semibold">Size:</span> <span>{fileInfo.size}</span>
+      <span className="font-semibold">Type:</span> <span>{fileInfo.type || "Unknown"}</span>
+      <span className="font-semibold">Modified:</span> <span>{fileInfo.lastModified}</span>
+    </div>
+  </div>
+) : (
+  <p className="mt-4 text-sm text-muted-foreground">
+    No file selected yet. Upload a file to view its details.
+  </p>
+)}
+
           </div>
         </div>
 
