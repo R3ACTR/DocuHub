@@ -9,6 +9,10 @@ export default function PdfMergePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
+const removeFile = (indexToRemove: number) => {
+  setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
+};
+  
 const moveFile = (from: number, to: number) => {
   const updated = [...files];
   const [moved] = updated.splice(from, 1);
@@ -129,11 +133,29 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
       borderRadius: "5px",
       backgroundColor: "#f0f0f0",
       cursor: "grab",
+      display: "flex",
+      justifyContent: "space-between",
+      alignItems: "center",
     }}
   >
-    📄 {file.name}
+    <span>📄 {file.name}</span>
+
+    <button
+      onClick={() => removeFile(index)}
+      style={{
+        backgroundColor: "#ef4444",
+        color: "white",
+        border: "none",
+        borderRadius: "4px",
+        padding: "4px 8px",
+        cursor: "pointer",
+      }}
+    >
+      Remove
+    </button>
   </div>
 ))}
+
 
 
       <button
