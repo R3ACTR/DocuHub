@@ -9,6 +9,13 @@ export default function PdfMergePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
+  const formatFileSize = (bytes: number) => {
+  if (bytes < 1024) return bytes + " B";
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
+};
+
+
 const removeFile = (indexToRemove: number) => {
   setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
 };
@@ -85,19 +92,38 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
   };
 
   return (
-    <div
+  <div
   style={{
-    padding: '2rem',
-    border: isDragging ? '2px dashed #4f46e5' : '2px dashed #ccc',
-    backgroundColor: isDragging ? '#eef2ff' : 'transparent',
-    borderRadius: '8px',
+    maxWidth: "600px",
+    margin: "40px auto",
+    padding: "24px",
+    border: isDragging ? "2px dashed #4f46e5" : "2px dashed #d1d5db",
+    backgroundColor: isDragging ? "#eef2ff" : "#fafafa",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
   }}
   onDragOver={handleDragOver}
   onDragLeave={handleDragLeave}
   onDrop={handleDrop}
 >
 
-      <h1>PDF Merge</h1>
+
+      <h1 style={{
+  fontSize: "24px",
+  fontWeight: "600",
+  marginBottom: "6px",
+}}>
+  Merge PDF Files
+</h1>
+
+<p style={{
+  color: "#6b7280",
+  fontSize: "14px",
+  marginBottom: "16px",
+}}>
+  Drag & drop or select multiple PDF files to merge them into one document.
+</p>
+
       <p>Select multiple PDF files to merge them into one.</p>
       <p style={{ color: '#666', marginTop: '0.5rem' }}>
   Drag & drop PDF files here, or use the file picker below.
@@ -105,16 +131,39 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
 
 
       <input
-        type="file"
-        accept="application/pdf"
-        multiple
-        onChange={(e) => {
-          if (!e.target.files) return;
-          setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-        }}
-      />
+  type="file"
+  accept="application/pdf"
+  multiple
+  style={{
+    marginTop: "10px",
+    marginBottom: "10px",
+  }}
+  onChange={(e) => {
+    if (!e.target.files) return;
+    setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
+  }}
+/>
+
 
       <p>{files.length} file(s) selected</p>
+
+      {files.length > 0 && (
+  <button
+    onClick={() => setFiles([])}
+    style={{
+      marginBottom: "10px",
+      backgroundColor: "#6b7280",
+      color: "white",
+      border: "none",
+      borderRadius: "6px",
+      padding: "6px 12px",
+      cursor: "pointer",
+    }}
+  >
+    Clear All
+  </button>
+)}
+
       {files.map((file, index) => (
   <div
     key={index}
@@ -126,30 +175,55 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
       moveFile(dragIndex, index);
       setDragIndex(null);
     }}
-    style={{
-      padding: "8px",
-      marginTop: "5px",
-      border: "1px solid gray",
-      borderRadius: "5px",
-      backgroundColor: "#f0f0f0",
-      cursor: "grab",
-      display: "flex",
-      justifyContent: "space-between",
-      alignItems: "center",
-    }}
+style={{
+  padding: "12px",
+  marginTop: "10px",
+  border: "1px solid #e5e7eb",
+  borderRadius: "8px",
+  backgroundColor: "white",
+  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+}}
+
   >
-    <span>📄 {file.name}</span>
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+  <span style={{
+    backgroundColor: "#4f46e5",
+    color: "white",
+    borderRadius: "50%",
+    width: "24px",
+    height: "24px",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    fontSize: "12px"
+  }}>
+    {index + 1}
+  </span>
+
+  <div>
+    <div style={{ fontWeight: "500" }}>📄 {file.name}</div>
+    <div style={{ fontSize: "12px", color: "#666" }}>
+      {formatFileSize(file.size)}
+    </div>
+  </div>
+</div>
+
 
     <button
       onClick={() => removeFile(index)}
       style={{
-        backgroundColor: "#ef4444",
-        color: "white",
-        border: "none",
-        borderRadius: "4px",
-        padding: "4px 8px",
-        cursor: "pointer",
-      }}
+  backgroundColor: "#ef4444",
+  color: "white",
+  border: "none",
+  borderRadius: "6px",
+  padding: "6px 10px",
+  cursor: "pointer",
+  fontSize: "12px",
+}}
+
     >
       Remove
     </button>
@@ -157,14 +231,25 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
 ))}
 
 
-
+<div style={{ textAlign: "center" }}>
       <button
-        onClick={handleMerge}
-        disabled={loading || files.length < 2}
-        style={{ marginTop: '1rem' }}
-      >
-        {loading ? 'Merging...' : 'Merge PDFs'}
-      </button>
+  onClick={handleMerge}
+  disabled={loading || files.length < 2}
+  style={{
+    marginTop: "20px",
+    backgroundColor: loading || files.length < 2 ? "#9ca3af" : "#4f46e5",
+    color: "white",
+    border: "none",
+    borderRadius: "8px",
+    padding: "10px 18px",
+    cursor: loading || files.length < 2 ? "not-allowed" : "pointer",
+    fontWeight: "500",
+    fontSize: "14px",
+  }}
+>
+  {loading ? "Merging PDFs..." : "Merge PDFs"}
+</button>
+</div>
     </div>
   );
 }
