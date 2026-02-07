@@ -1,5 +1,7 @@
 "use client";
 
+import { ToolCard } from "@/components/ToolCard";
+import { FileText } from "lucide-react";
 import { Upload } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useState } from "react";
@@ -9,6 +11,35 @@ export default function ToolUploadPage() {
     const router = useRouter();
     const params = useParams();
     const toolId = params.id;
+    if (toolId === "pdf-tools") {
+    return (
+        <div className="min-h-screen flex flex-col">
+            <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
+
+                <div className="mb-12">
+                    <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
+                        PDF Tools
+                    </h1>
+                    <p className="text-muted-foreground text-lg">
+                        Choose a PDF tool
+                    </p>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
+                    <ToolCard
+                        icon={FileText}
+                        title="Merge PDF"
+                        description="Combine multiple PDFs into one"
+                        href="/dashboard/pdf-merge"
+                        disabled={false}
+                    />
+                </div>
+
+            </main>
+        </div>
+    );
+}
+
 
     const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
