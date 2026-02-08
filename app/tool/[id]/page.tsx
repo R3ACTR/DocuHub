@@ -5,12 +5,28 @@ import { ArrowLeft } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
 import { FileText, Upload } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
+import { useState } from "react";
+
 import { motion } from "framer-motion";
 
 export default function ToolUploadPage() {
     const router = useRouter();
     const params = useParams();
     const toolId = params.id;
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        setSelectedFile(file);
+
+        // simulate processing delay
+        setTimeout(() => {
+            router.push(`/tool/${toolId}/processing`);
+        }, 500);
+    };
+
+
     const getToolTitle = () => {
         switch (toolId) {
             case "file-conversion":
@@ -30,67 +46,67 @@ export default function ToolUploadPage() {
 
     // PDF Tools page
     if (toolId === "pdf-tools") {
-  return (
-    <div className="min-h-screen flex flex-col">
+        return (
+            <div className="min-h-screen flex flex-col">
 
-      {/* Back to Dashboard */}
-      <div className="container mx-auto px-6 pt-6 md:px-12">
-        <Link
-          href="/dashboard"
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e1e2e]"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
-        </Link>
-      </div>
+                {/* Back to Dashboard */}
+                <div className="container mx-auto px-6 pt-6 md:px-12">
+                    <Link
+                        href="/dashboard"
+                        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e1e2e]"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Dashboard
+                    </Link>
+                </div>
 
-      <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
-        <div className="mb-12">
-          <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
-            PDF Tools
-          </h1>
-          <p className="text-muted-foreground text-lg">
-            Choose a PDF tool
-          </p>
-        </div>
+                <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
+                    <div className="mb-12">
+                        <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
+                            PDF Tools
+                        </h1>
+                        <p className="text-muted-foreground text-lg">
+                            Choose a PDF tool
+                        </p>
+                    </div>
 
-        <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-          <ToolCard
-            icon={FileText}
-            title="Merge PDF"
-            description="Combine multiple PDFs into one"
-            href="/dashboard/pdf-merge"
-            disabled={false}
-          />
+                    <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
+                        <ToolCard
+                            icon={FileText}
+                            title="Merge PDF"
+                            description="Combine multiple PDFs into one"
+                            href="/dashboard/pdf-merge"
+                            disabled={false}
+                        />
 
-          <ToolCard
-            icon={FileText}
-            title="Split PDF"
-            description="Split PDF into separate pages"
-            href="/dashboard/pdf-split"
-            disabled={false}
-          />
+                        <ToolCard
+                            icon={FileText}
+                            title="Split PDF"
+                            description="Split PDF into separate pages"
+                            href="/dashboard/pdf-split"
+                            disabled={false}
+                        />
 
-          <ToolCard
-            icon={FileText}
-            title="Document to PDF"
-            description="Convert documents into PDF format"
-            href="/dashboard/document-to-pdf"
-            disabled={false}
-          />
+                        <ToolCard
+                            icon={FileText}
+                            title="Document to PDF"
+                            description="Convert documents into PDF format"
+                            href="/dashboard/document-to-pdf"
+                            disabled={false}
+                        />
 
-          <ToolCard
-            icon={FileText}
-            title="Protect PDF"
-            description="Secure your PDF with a password"
-            href="/dashboard/pdf-protect"
-            disabled={false}
-          />
-        </div>
-      </main>
-    </div>
-  );
-}
+                        <ToolCard
+                            icon={FileText}
+                            title="Protect PDF"
+                            description="Secure your PDF with a password"
+                            href="/dashboard/pdf-protect"
+                            disabled={false}
+                        />
+                    </div>
+                </main>
+            </div>
+        );
+    }
 
 
     // Upload page for other tools
@@ -112,6 +128,21 @@ export default function ToolUploadPage() {
                     </h1>
 
                 </div>
+                {/* Empty state shown before file upload */}
+                {!selectedFile && (
+                    <div className="mb-8 text-center text-muted-foreground">
+                        <div className="flex flex-col items-center gap-2">
+                            <Upload className="w-10 h-10 opacity-60" />
+                            <p className="text-lg font-medium">
+                                No file selected yet
+                            </p>
+                            <p className="text-sm">
+                                Upload a file to get started
+                            </p>
+                        </div>
+                    </div>
+                )}
+
 
                 <div className="w-full max-w-5xl">
                     <motion.div
