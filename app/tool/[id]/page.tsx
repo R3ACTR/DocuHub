@@ -48,6 +48,16 @@ export default function ToolUploadPage() {
                             disabled={false}
                         />
 
+                        {/* Document to PDF */}
+                        <ToolCard
+                            icon={FileText}
+                            title="Document to PDF"
+                            description="Convert documents into PDF format"
+                            href="/dashboard/document-to-pdf"
+                            disabled={false}
+                        />
+
+
                     </div>
 
                 </main>

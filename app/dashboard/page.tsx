@@ -13,6 +13,8 @@ export default function Dashboard() {
 
         {/* Tools Grid matching Image 2 Style */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 max-w-5xl">
+         
+
           <ToolCard
             icon={FileText}
             title="PDF Tools"
