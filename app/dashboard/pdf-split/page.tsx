@@ -7,7 +7,6 @@ export default function PdfSplitPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [pageRange, setPageRange] = useState("");
 
   const formatFileSize = (bytes: number) => {
@@ -18,13 +17,6 @@ export default function PdfSplitPage() {
 
   const removeFile = (indexToRemove: number) => {
     setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const moveFile = (from: number, to: number) => {
-    const updated = [...files];
-    const [moved] = updated.splice(from, 1);
-    updated.splice(to, 0, moved);
-    setFiles(updated);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
@@ -69,7 +61,7 @@ export default function PdfSplitPage() {
 
       const newPdf = await PDFDocument.create();
 
-      let pagesToExtract: number[] = [];
+      const pagesToExtract: number[] = [];
 
       if (pageRange.includes("-")) {
         const [start, end] = pageRange.split("-").map(Number);

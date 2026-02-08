@@ -1,57 +1,110 @@
 'use client';
 
 import { useState } from 'react';
-import { PDFDocument } from 'pdf-lib';
+import { PDFDocument, PDFPage } from 'pdf-lib';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import { SortablePdfItem } from '@/components/SortablePdfItem';
+import { FileUp, Trash2, Combine, FileText, Loader2 } from 'lucide-react';
+
+interface FileWithId {
+  id: string;
+  file: File;
+}
 
 export default function PdfMergePage() {
-  const [files, setFiles] = useState<File[]>([]);
+  const [filesWithIds, setFilesWithIds] = useState<FileWithId[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
-  const formatFileSize = (bytes: number) => {
-  if (bytes < 1024) return bytes + " B";
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-  return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-};
-
-
-const removeFile = (indexToRemove: number) => {
-  setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
-};
-  
-const moveFile = (from: number, to: number) => {
-  const updated = [...files];
-  const [moved] = updated.splice(from, 1);
-  updated.splice(to, 0, moved);
-  setFiles(updated);
-};
-
-
-const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  setIsDragging(true);
-};
-
-const handleDragLeave = () => {
-  setIsDragging(false);
-};
-
-const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-  e.preventDefault();
-  setIsDragging(false);
-
-  const droppedFiles = Array.from(e.dataTransfer.files).filter(
-    (file) => file.type === 'application/pdf'
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
   );
 
-  if (droppedFiles.length === 0) return;
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
 
-  setFiles((prev) => [...prev, ...droppedFiles]);
-};
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+
+    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+      (file) => file.type === 'application/pdf'
+    );
+
+    if (droppedFiles.length === 0) return;
+
+    const newFiles = droppedFiles.map((file) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+    }));
+
+    setFilesWithIds((prev) => [...prev, ...newFiles]);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    
+    const selectedFiles = Array.from(e.target.files).filter(
+      (file) => file.type === 'application/pdf'
+    );
+
+    const newFiles = selectedFiles.map((file) => ({
+      id: Math.random().toString(36).substr(2, 9),
+      file,
+    }));
+
+    setFilesWithIds((prev) => [...prev, ...newFiles]);
+    // Reset input value to allow selecting the same file again
+    e.target.value = '';
+  };
+
+  const removeFile = (idToRemove: string) => {
+    setFilesWithIds((prev) => prev.filter((item) => item.id !== idToRemove));
+  };
+
+  const clearAll = () => {
+    setFilesWithIds([]);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      setFilesWithIds((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id);
+        const newIndex = items.findIndex((item) => item.id === over.id);
+
+        return arrayMove(items, oldIndex, newIndex);
+      });
+    }
+  };
 
   const handleMerge = async () => {
-    if (files.length < 2) {
+    if (filesWithIds.length < 2) {
       alert('Please select at least 2 PDF files');
       return;
     }
@@ -61,27 +114,23 @@ const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const file of files) {
-        const bytes = await file.arrayBuffer();
+      for (const item of filesWithIds) {
+        const bytes = await item.file.arrayBuffer();
         const pdf = await PDFDocument.load(bytes);
         const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
-        pages.forEach((page: any) => mergedPdf.addPage(page));
+        pages.forEach((page: PDFPage) => mergedPdf.addPage(page));
       }
 
       const mergedBytes = await mergedPdf.save();
-const blob = new Blob([new Uint8Array(mergedBytes)], {
-  type: 'application/pdf',
-});
-
-
+      const blob = new Blob([new Uint8Array(mergedBytes)], {
+        type: 'application/pdf',
+      });
 
       const url = URL.createObjectURL(blob);
-
       const a = document.createElement('a');
       a.href = url;
       a.download = 'merged.pdf';
       a.click();
-
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error(err);
@@ -92,164 +141,125 @@ const blob = new Blob([new Uint8Array(mergedBytes)], {
   };
 
   return (
-  <div
-  style={{
-    maxWidth: "600px",
-    margin: "40px auto",
-    padding: "24px",
-    border: isDragging ? "2px dashed #4f46e5" : "2px dashed #d1d5db",
-    backgroundColor: isDragging ? "#eef2ff" : "#fafafa",
-    borderRadius: "12px",
-    boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-  }}
-  onDragOver={handleDragOver}
-  onDragLeave={handleDragLeave}
-  onDrop={handleDrop}
->
+    <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+      <div className="text-center mb-10">
+        <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-4">
+          <Combine className="w-8 h-8" />
+        </div>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Merge PDF Files</h1>
+        <p className="mt-2 text-lg text-gray-600">
+          Combine multiple PDF documents into a single file. Reorder them as needed.
+        </p>
+      </div>
 
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative border-2 border-dashed rounded-3xl p-12 transition-all duration-200 text-center ${
+          isDraggingOver
+            ? 'border-indigo-500 bg-indigo-50/50'
+            : 'border-gray-200 bg-white hover:border-gray-300'
+        }`}
+      >
+        <input
+          type="file"
+          accept="application/pdf"
+          multiple
+          onChange={handleFileChange}
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          id="file-upload"
+        />
+        <div className="flex flex-col items-center">
+          <div className="p-4 bg-gray-50 rounded-full mb-4">
+            <FileUp className="w-10 h-10 text-gray-400" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {isDraggingOver ? 'Drop files here' : 'Select PDF files to merge'}
+          </h3>
+          <p className="mt-1 text-sm text-gray-500">
+            Drag and drop files here, or click to browse
+          </p>
+          <div className="mt-6">
+            <label
+              htmlFor="file-upload"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer"
+            >
+              Choose Files
+            </label>
+          </div>
+        </div>
+      </div>
 
-      <h1 style={{
-  fontSize: "24px",
-  fontWeight: "600",
-  marginBottom: "6px",
-}}>
-  Merge PDF Files
-</h1>
+      {filesWithIds.length > 0 && (
+        <div className="mt-12 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <FileText className="w-5 h-5 text-indigo-600" />
+              <h2 className="text-xl font-bold text-gray-900">
+                {filesWithIds.length} {filesWithIds.length === 1 ? 'file' : 'files'} selected
+              </h2>
+            </div>
+            <button
+              onClick={clearAll}
+              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            >
+              <Trash2 className="w-4 h-4" />
+              Clear All
+            </button>
+          </div>
 
-<p style={{
-  color: "#6b7280",
-  fontSize: "14px",
-  marginBottom: "16px",
-}}>
-  Drag & drop or select multiple PDF files to merge them into one document.
-</p>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+            modifiers={[restrictToVerticalAxis]}
+          >
+            <SortableContext
+              items={filesWithIds.map((f) => f.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-3">
+                {filesWithIds.map((item, index) => (
+                  <SortablePdfItem
+                    key={item.id}
+                    id={item.id}
+                    file={item.file}
+                    index={index}
+                    onRemove={() => removeFile(item.id)}
+                  />
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
 
-      <p>Select multiple PDF files to merge them into one.</p>
-      <p style={{ color: '#666', marginTop: '0.5rem' }}>
-  Drag & drop PDF files here, or use the file picker below.
-</p>
-
-
-      <input
-  type="file"
-  accept="application/pdf"
-  multiple
-  style={{
-    marginTop: "10px",
-    marginBottom: "10px",
-  }}
-  onChange={(e) => {
-    if (!e.target.files) return;
-    setFiles((prev) => [...prev, ...Array.from(e.target.files!)]);
-  }}
-/>
-
-
-      <p>{files.length} file(s) selected</p>
-
-      {files.length > 0 && (
-  <button
-    onClick={() => setFiles([])}
-    style={{
-      marginBottom: "10px",
-      backgroundColor: "#6b7280",
-      color: "white",
-      border: "none",
-      borderRadius: "6px",
-      padding: "6px 12px",
-      cursor: "pointer",
-    }}
-  >
-    Clear All
-  </button>
-)}
-
-      {files.map((file, index) => (
-  <div
-    key={index}
-    draggable
-    onDragStart={() => setDragIndex(index)}
-    onDragOver={(e) => e.preventDefault()}
-    onDrop={() => {
-      if (dragIndex === null) return;
-      moveFile(dragIndex, index);
-      setDragIndex(null);
-    }}
-style={{
-  padding: "12px",
-  marginTop: "10px",
-  border: "1px solid #e5e7eb",
-  borderRadius: "8px",
-  backgroundColor: "white",
-  boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-}}
-
-  >
-    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-  <span style={{
-    backgroundColor: "#4f46e5",
-    color: "white",
-    borderRadius: "50%",
-    width: "24px",
-    height: "24px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "12px"
-  }}>
-    {index + 1}
-  </span>
-
-  <div>
-    <div style={{ fontWeight: "500" }}>📄 {file.name}</div>
-    <div style={{ fontSize: "12px", color: "#666" }}>
-      {formatFileSize(file.size)}
-    </div>
-  </div>
-</div>
-
-
-    <button
-      onClick={() => removeFile(index)}
-      style={{
-  backgroundColor: "#ef4444",
-  color: "white",
-  border: "none",
-  borderRadius: "6px",
-  padding: "6px 10px",
-  cursor: "pointer",
-  fontSize: "12px",
-}}
-
-    >
-      Remove
-    </button>
-  </div>
-))}
-
-
-<div style={{ textAlign: "center" }}>
-      <button
-  onClick={handleMerge}
-  disabled={loading || files.length < 2}
-  style={{
-    marginTop: "20px",
-    backgroundColor: loading || files.length < 2 ? "#9ca3af" : "#4f46e5",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    padding: "10px 18px",
-    cursor: loading || files.length < 2 ? "not-allowed" : "pointer",
-    fontWeight: "500",
-    fontSize: "14px",
-  }}
->
-  {loading ? "Merging PDFs..." : "Merge PDFs"}
-</button>
-</div>
+          <div className="pt-6 border-t border-gray-100 flex justify-center">
+            <button
+              onClick={handleMerge}
+              disabled={loading || filesWithIds.length < 2}
+              className={`group relative flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[200px] justify-center overflow-hidden`}
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Merging...
+                </>
+              ) : (
+                <>
+                  <Combine className="w-5 h-5" />
+                  Merge PDFs
+                </>
+              )}
+            </button>
+          </div>
+          
+          {filesWithIds.length < 2 && !loading && (
+            <p className="text-center text-sm text-gray-500 mt-2">
+              Select at least 2 PDF files to enable merging
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
