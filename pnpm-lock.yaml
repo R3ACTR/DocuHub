@@ -8,6 +8,9 @@ importers:
 
   .:
     dependencies:
+      '@pdfsmaller/pdf-encrypt-lite':
+        specifier: ^1.0.0
+        version: 1.0.1(pdf-lib@1.17.1)
       '@dnd-kit/core':
         specifier: ^6.3.1
         version: 6.3.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -566,6 +569,12 @@ packages:
 
   '@pdf-lib/upng@1.0.1':
     resolution: {integrity: sha512-dQK2FUMQtowVP00mtIksrlZhdFXQZPC+taih1q4CvPZ5vqdxR/LKBaFg0oAfzd1GlHZXXSPdQfzQnt+ViGvEIQ==}
+
+  '@pdfsmaller/pdf-encrypt-lite@1.0.1':
+    resolution: {integrity: sha512-9giOp0WRqGqV/dwDSMJFBLaYe3IFmyQWvmQDeY//VZOGTQIvWHAfncV+6NSgdAjoCpUilHdXTJx0X/6YF1gegw==}
+    engines: {node: '>=14.0.0'}
+    peerDependencies:
+      pdf-lib: ^1.17.1
 
   '@rtsao/scc@1.1.0':
     resolution: {integrity: sha512-zt6OdqaDoOnJ1ZYsCYGt9YmWzDXl4vQdKTyJev62gFhRGKdx7mcT54V9KIjg+d2wi9EXsPvAPKe7i7WjfVWB8g==}
@@ -2564,6 +2573,10 @@ snapshots:
   '@pdf-lib/upng@1.0.1':
     dependencies:
       pako: 1.0.11
+
+  '@pdfsmaller/pdf-encrypt-lite@1.0.1(pdf-lib@1.17.1)':
+    dependencies:
+      pdf-lib: 1.17.1
 
   '@rtsao/scc@1.1.0': {}
 
