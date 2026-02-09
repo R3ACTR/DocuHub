@@ -8,6 +8,11 @@ export default function DocumentToPdfPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // ✅ Remove selected file
+  const handleRemoveFile = () => {
+    setFiles([]);
+  };
+
   const handleConvert = async () => {
     if (!files.length) {
       alert("Select a file");
@@ -22,10 +27,8 @@ export default function DocumentToPdfPage() {
 
       console.log("Processing:", file.name);
 
-      // ✅ DOCX Support (case insensitive)
+      // ✅ DOCX Support
       if (file.name.toLowerCase().endsWith(".docx")) {
-        console.log("DOCX detected");
-
         const arrayBuffer = await file.arrayBuffer();
 
         const result = await mammoth.extractRawText({
@@ -33,9 +36,7 @@ export default function DocumentToPdfPage() {
         });
 
         text = result.value || "";
-      } 
-      else {
-        console.log("Text file detected");
+      } else {
         text = await file.text();
       }
 
@@ -46,7 +47,7 @@ export default function DocumentToPdfPage() {
 
       // ✅ Create PDF
       const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage([595, 842]); // A4
+      const page = pdfDoc.addPage([595, 842]);
 
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
@@ -54,7 +55,7 @@ export default function DocumentToPdfPage() {
       const margin = 50;
       const { width, height } = page.getSize();
 
-      // ✅ Word Wrap Safe Version
+      // ✅ Word Wrap
       const words = text.split(/\s+/);
       let lines: string[] = [];
       let currentLine = "";
@@ -73,7 +74,7 @@ export default function DocumentToPdfPage() {
 
       if (currentLine) lines.push(currentLine);
 
-      // ✅ Draw text safely
+      // ✅ Draw text
       let y = height - margin;
 
       for (const line of lines) {
@@ -102,9 +103,6 @@ export default function DocumentToPdfPage() {
       a.click();
 
       URL.revokeObjectURL(url);
-
-      console.log("PDF created successfully");
-
     } catch (err) {
       console.error("CONVERSION ERROR:", err);
       alert("Failed to convert document. Check console (F12).");
@@ -117,6 +115,7 @@ export default function DocumentToPdfPage() {
     <div style={{ maxWidth: 600, margin: "40px auto" }}>
       <h1>Document to PDF</h1>
 
+      {/* ✅ Upload Input */}
       <input
         type="file"
         accept=".txt,.html,.json,.docx"
@@ -126,8 +125,41 @@ export default function DocumentToPdfPage() {
         }}
       />
 
-      <br /><br />
+      {/* ✅ File Preview Section */}
+      {files.length > 0 && (
+        <div
+          style={{
+            marginTop: 20,
+            padding: 12,
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            background: "#f9f9f9",
+          }}
+        >
+          <span>📄 {files[0].name}</span>
 
+          <button
+            onClick={handleRemoveFile}
+            style={{
+              background: "#ff4d4f",
+              color: "white",
+              border: "none",
+              padding: "6px 12px",
+              borderRadius: 6,
+              cursor: "pointer",
+            }}
+          >
+            Remove ❌
+          </button>
+        </div>
+      )}
+
+      <br />
+
+      {/* ✅ Convert Button */}
       <button onClick={handleConvert} disabled={loading}>
         {loading ? "Converting..." : "Convert to PDF"}
       </button>
