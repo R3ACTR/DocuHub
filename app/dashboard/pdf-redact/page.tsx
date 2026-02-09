@@ -28,7 +28,9 @@ interface Rect {
 
 export default function PdfRedactPage() {
   const [file, setFile] = useState<File | null>(null);
-  const [rectangles, setRectangles] = useState<Rect[]>([]);
+const [rectanglesByPage, setRectanglesByPage] = useState<{
+  [page: number]: Rect[];
+}>({});
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(false);
@@ -37,12 +39,14 @@ export default function PdfRedactPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 const [pdfDoc, setPdfDoc] = useState<any>(null);
 const [pageNumber, setPageNumber] = useState(1);
+const rectangles = rectanglesByPage[pageNumber] || [];
 const [totalPages, setTotalPages] = useState(0);
 
   // Load PDF
   const loadPDF = async (selectedFile: File) => {
     setFile(selectedFile);
-    setRectangles([]);
+    setRectanglesByPage({});
+
 
     const arrayBuffer = await selectedFile.arrayBuffer();
 
@@ -135,10 +139,18 @@ const goToPrevPage = async () => {
     setStartPoint({ x, y });
     setIsDrawing(true);
 
-    setRectangles((prev) => [
-      ...prev,
+  setRectanglesByPage((prev) => {
+  const pageRects = prev[pageNumber] || [];
+
+  return {
+    ...prev,
+    [pageNumber]: [
+      ...pageRects,
       { x, y, width: 0, height: 0 },
-    ]);
+    ],
+  };
+});
+
   };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -149,19 +161,25 @@ const goToPrevPage = async () => {
     const currentX = e.clientX - rect.left;
     const currentY = e.clientY - rect.top;
 
-    setRectangles((prev) => {
-      const updated = [...prev];
-      const last = updated.length - 1;
+    setRectanglesByPage((prev) => {
+  const pageRects = [...(prev[pageNumber] || [])];
+  const last = pageRects.length - 1;
 
-      updated[last] = {
-        x: Math.min(startPoint.x, currentX),
-        y: Math.min(startPoint.y, currentY),
-        width: Math.abs(currentX - startPoint.x),
-        height: Math.abs(currentY - startPoint.y),
-      };
+  if (last < 0) return prev;
 
-      return updated;
-    });
+  pageRects[last] = {
+    x: Math.min(startPoint.x, currentX),
+    y: Math.min(startPoint.y, currentY),
+    width: Math.abs(currentX - startPoint.x),
+    height: Math.abs(currentY - startPoint.y),
+  };
+
+  return {
+    ...prev,
+    [pageNumber]: pageRects,
+  };
+});
+
   };
 
   const handleMouseUp = () => {
