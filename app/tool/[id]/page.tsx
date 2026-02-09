@@ -3,22 +3,32 @@
 import Link from "next/link";
 import { ArrowLeft, FileText, Upload } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
-import { useParams } from "next/navigation";
-import { useState, useRef } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 export default function ToolUploadPage() {
+    const router = useRouter();
     const params = useParams();
     const toolId = params.id as string;
 
+    const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        setSelectedFile(file);
-    };
+    // Warn on refresh / tab close
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!hasUnsavedWork) return;
+            e.preventDefault();
+            e.returnValue = "";
+        };
+
+        window.addEventListener("beforeunload", handleBeforeUnload);
+        return () => {
+            window.removeEventListener("beforeunload", handleBeforeUnload);
+        };
+    }, [hasUnsavedWork]);
 
     const getToolTitle = () => {
         switch (toolId) {
@@ -33,23 +43,40 @@ export default function ToolUploadPage() {
         }
     };
 
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setSelectedFile(file);
+        setHasUnsavedWork(true);
+    };
+
+    const handleBackNavigation = () => {
+        if (hasUnsavedWork) {
+            const confirmLeave = window.confirm(
+                "You have unsaved work. Are you sure you want to leave this page?"
+            );
+            if (!confirmLeave) return;
+        }
+        router.push("/dashboard");
+    };
+
     // PDF Tools page
     if (toolId === "pdf-tools") {
         return (
             <div className="min-h-screen flex flex-col">
                 <div className="container mx-auto px-6 pt-6 md:px-12">
-                    <Link
-                        href="/dashboard"
+                    <button
+                        onClick={handleBackNavigation}
                         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e1e2e]"
                     >
                         <ArrowLeft className="w-4 h-4" />
                         Back to Dashboard
-                    </Link>
+                    </button>
                 </div>
 
                 <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
                     <div className="mb-12">
-                        <h1 className="text-3xl font-semibold text-[#1e1e2e] mb-2">
+                        <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
                             PDF Tools
                         </h1>
                         <p className="text-muted-foreground text-lg">
@@ -72,13 +99,13 @@ export default function ToolUploadPage() {
     return (
         <div className="min-h-screen flex flex-col">
             <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
-                <Link
-                    href="/dashboard"
+                <button
+                    onClick={handleBackNavigation}
                     className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e1e2e] mb-6"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Dashboard
-                </Link>
+                </button>
 
                 <h1 className="text-3xl font-semibold text-[#1e1e2e] mb-12">
                     {getToolTitle()}
@@ -108,19 +135,24 @@ export default function ToolUploadPage() {
                     </motion.div>
 
                     {selectedFile && (
-                        <div className="mt-4 text-sm text-muted-foreground">
-                            <p>
-                                <strong>Selected file:</strong>{" "}
-                                {selectedFile.name} (
-                                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
-                            </p>
+                        <div className="mt-4 flex items-center justify-between rounded-lg border bg-white px-4 py-3 text-sm">
+                            <div>
+                                <p className="font-medium text-[#1e1e2e]">
+                                    {selectedFile.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                                </p>
+                            </div>
 
                             <button
-                                type="button"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="mt-2 text-sm text-blue-600 hover:underline"
+                                onClick={() => {
+                                    setSelectedFile(null);
+                                    setHasUnsavedWork(false);
+                                }}
+                                className="text-xs text-red-500 hover:underline"
                             >
-                                Change file
+                                Remove
                             </button>
                         </div>
                     )}
