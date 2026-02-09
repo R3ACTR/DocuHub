@@ -313,34 +313,64 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 ---
 
 ## 🎥 Demo
-### Screenshots
 
-##landing
-<img width="1440" height="1024" alt="Landing" src="https://github.com/user-attachments/assets/86fdafea-d64e-4d73-bef4-6e13279852eb" />
-Privacy-first document processing - all tools in one place
-##tool_selection
-<img width="1440" height="1024" alt="Tool Selection" src="https://github.com/user-attachments/assets/8ead55fc-10c0-4eaa-8d70-837a0640cda8" />
-Choose from PDF operations, conversions, OCR, and data tools
-##file_upload
-<img width="1440" height="1024" alt="File upload" src="https://github.com/user-attachments/assets/70e15c5c-ca7b-44d7-ad38-38551494535f" />
-Simple drag-and-drop interface - all processing happens locally
+Here are some screenshots showing DocuHub in action — all processing happens locally in your browser.
+
+### Landing Page
+**Privacy-first document processing - all tools in one place**
+
+<img width="1440" alt="Landing Page" src="https://github.com/user-attachments/assets/86fdafea-d64e-4d73-bef4-6e13279852eb">
+
+---
+
+### Tool Selection
+**Choose from PDF operations, conversions, OCR, and data tools**
+
+<img width="1440" alt="Tool Selection" src="https://github.com/user-attachments/assets/8ead55fc-10c0-4eaa-8d70-837a0640cda8">
+
+---
+
+### File Upload
+**Simple drag-and-drop interface - all processing happens locally**
+
+<img width="1440" alt="File Upload" src="https://github.com/user-attachments/assets/70e15c5c-ca7b-44d7-ad38-38551494535f">
+
+---
+
 ### Processing
+**Visual feedback during processing operations**
+
 <img width="1440" alt="Processing" src="https://github.com/user-attachments/assets/fc5a6d17-80e8-47e1-a284-79f172ad41dc">
-Visual feedback during processing operations
+
+---
+
 ### Result
+**View and download your processed documents**
+
 <img width="1440" alt="Result" src="https://github.com/user-attachments/assets/ac93d437-0a11-411b-9158-97b315e7ba98">
-View and download your processed documents
+
+---
+
 ### Merge PDF Flow
+**Upload multiple PDFs to merge into a single document**
+
 <img width="393" alt="Merge PDF – Upload" src="https://github.com/user-attachments/assets/bd7a5017-066b-44db-8ae5-dd716760c58f">
-Upload multiple PDFs to merge into a single document
+
+**Review selected files before merging**
+
 <img width="393" alt="Merge PDFs – Files Selected" src="https://github.com/user-attachments/assets/6d1b4a15-df3b-48cb-99e5-44ac3ad3ace8">
-Review selected files before merging
+
+**Drag and drop to reorder PDFs - complete control over final document**
+
 <img width="393" alt="Merge PDFs – Reordering" src="https://github.com/user-attachments/assets/bfc70b9f-dcdc-4937-b07c-b49b2608a599">
-Drag and drop to reorder PDFs - complete control over final document
+
+**Real-time processing with WebAssembly - fast and efficient**
+
 <img width="393" alt="Merge PDFs – Processing" src="https://github.com/user-attachments/assets/9a8098f0-9871-4386-bdee-8563fb6b1aa7">
-Real-time processing with WebAssembly - fast and efficient
+
+**Download your merged PDF - all processing done in your browser**
+
 <img width="393" alt="Merge PDFs – Success" src="https://github.com/user-attachments/assets/e5607788-0711-4ff5-9b32-60a5bee6d9e9">
-Download your merged PDF - all processing done in your browser
 
 ---
 
