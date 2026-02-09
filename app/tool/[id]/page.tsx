@@ -85,11 +85,47 @@ export default function ToolUploadPage() {
                     </div>
 
                     <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-                        <ToolCard icon={FileText} title="Merge PDF" description="Combine multiple PDFs into one" href="/dashboard/pdf-merge" />
-                        <ToolCard icon={FileText} title="Split PDF" description="Split PDF into separate pages" href="/dashboard/pdf-split" />
-                        <ToolCard icon={FileText} title="Document to PDF" description="Convert documents into PDF format" href="/dashboard/document-to-pdf" />
-                        <ToolCard icon={FileText} title="Protect PDF" description="Secure your PDF with a password" href="/dashboard/pdf-protect" />
-                    </div>
+    <ToolCard
+        icon={FileText}
+        title="Merge PDF"
+        description="Combine multiple PDFs into one"
+        href="/dashboard/pdf-merge"
+        disabled={false}
+    />
+
+    <ToolCard
+        icon={FileText}
+        title="Split PDF"
+        description="Split PDF into separate pages"
+        href="/dashboard/pdf-split"
+        disabled={false}
+    />
+
+    <ToolCard
+        icon={FileText}
+        title="Document to PDF"
+        description="Convert documents into PDF format"
+        href="/dashboard/document-to-pdf"
+        disabled={false}
+    />
+
+    <ToolCard
+        icon={FileText}
+        title="Protect PDF"
+        description="Secure your PDF with a password"
+        href="/dashboard/pdf-protect"
+        disabled={false}
+    />
+
+    <ToolCard
+        icon={FileText}
+        title="Redact PDF"
+        description="Remove sensitive information from your PDF"
+        href="/dashboard/pdf-redact"
+        disabled={false}
+    />
+</div>
+
                 </main>
             </div>
         );
