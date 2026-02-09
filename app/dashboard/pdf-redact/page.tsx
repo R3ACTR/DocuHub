@@ -2,7 +2,14 @@
 
 import { useState, useRef } from "react";
 import * as pdfjsLib from "pdfjs-dist";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
+import {
+  FileUp,
+  Shield,
+  Download,
+  Loader2,
+  FileText,
+} from "lucide-react";
 
 // Worker setup
 if (typeof window !== "undefined") {
@@ -20,23 +27,17 @@ interface Rect {
 }
 
 export default function PdfRedactPage() {
-
   const [file, setFile] = useState<File | null>(null);
   const [rectangles, setRectangles] = useState<Rect[]>([]);
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // Load PDF
-  const handleFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-
-    const selectedFile = e.target.files?.[0];
-    if (!selectedFile) return;
-
+  const loadPDF = async (selectedFile: File) => {
     setFile(selectedFile);
     setRectangles([]);
 
@@ -49,11 +50,39 @@ export default function PdfRedactPage() {
     await renderPage(pdf, 1);
   };
 
-  // Render PDF page
+  // File input change
+  const handleFileChange = async (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const selectedFile = e.target.files?.[0];
+    if (!selectedFile) return;
+    await loadPDF(selectedFile);
+  };
+
+  // Drag drop
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDraggingOver(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingOver(false);
+
+    const droppedFile = e.dataTransfer.files?.[0];
+
+    if (droppedFile && droppedFile.type === "application/pdf") {
+      await loadPDF(droppedFile);
+    }
+  };
+
+  // Render PDF
   const renderPage = async (pdf: any, pageNumber: number) => {
-
     const page = await pdf.getPage(pageNumber);
-
     const viewport = page.getViewport({ scale: 1.5 });
 
     const canvas = canvasRef.current;
@@ -71,31 +100,23 @@ export default function PdfRedactPage() {
     }).promise;
   };
 
-  // Mouse down
-  const handleMouseDown = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-
+  // Drawing logic
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = e.currentTarget.getBoundingClientRect();
 
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
     setStartPoint({ x, y });
-
     setIsDrawing(true);
 
-    setRectangles(prev => [
+    setRectangles((prev) => [
       ...prev,
-      { x, y, width: 0, height: 0 }
+      { x, y, width: 0, height: 0 },
     ]);
   };
 
-  // Mouse move
-  const handleMouseMove = (
-    e: React.MouseEvent<HTMLCanvasElement>
-  ) => {
-
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
 
     const rect = e.currentTarget.getBoundingClientRect();
@@ -103,10 +124,8 @@ export default function PdfRedactPage() {
     const currentX = e.clientX - rect.left;
     const currentY = e.clientY - rect.top;
 
-    setRectangles(prev => {
-
+    setRectangles((prev) => {
       const updated = [...prev];
-
       const last = updated.length - 1;
 
       updated[last] = {
@@ -120,146 +139,171 @@ export default function PdfRedactPage() {
     });
   };
 
-  // Mouse up
   const handleMouseUp = () => {
     setIsDrawing(false);
   };
 
-  // FIXED permanent redaction
+  // Redact
   const handleRedactPDF = async () => {
+    if (!canvasRef.current) return;
 
-  if (!canvasRef.current) return;
+    setLoading(true);
 
-  setLoading(true);
+    try {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext("2d");
 
-  try {
+      if (!ctx) return;
 
-    const canvas = canvasRef.current;
+      rectangles.forEach((rect) => {
+        ctx.fillStyle = "black";
+        ctx.fillRect(rect.x, rect.y, rect.width, rect.height);
+      });
 
-    const ctx = canvas.getContext("2d");
+      const imageDataUrl = canvas.toDataURL("image/png");
 
-    if (!ctx) return;
+      const pdfDoc = await PDFDocument.create();
+      const page = pdfDoc.addPage([
+        canvas.width,
+        canvas.height,
+      ]);
 
-    // Draw permanent black rectangles onto canvas
-    rectangles.forEach(rect => {
+      const pngImage = await pdfDoc.embedPng(imageDataUrl);
 
-      ctx.fillStyle = "black";
+      page.drawImage(pngImage, {
+        x: 0,
+        y: 0,
+        width: canvas.width,
+        height: canvas.height,
+      });
 
-      ctx.fillRect(
-        rect.x,
-        rect.y,
-        rect.width,
-        rect.height
-      );
+      const pdfBytes = await pdfDoc.save();
 
-    });
+      const blob = new Blob([new Uint8Array(pdfBytes)], {
+        type: "application/pdf",
+      });
 
-    // Convert canvas to image
-    const imageDataUrl = canvas.toDataURL("image/png");
+      const url = URL.createObjectURL(blob);
 
-    // Create new PDF
-    const pdfDoc = await PDFDocument.create();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "redacted-secure.pdf";
+      a.click();
 
-    const page = pdfDoc.addPage([
-      canvas.width,
-      canvas.height
-    ]);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error(err);
+    }
 
-    const pngImage = await pdfDoc.embedPng(imageDataUrl);
-
-    page.drawImage(pngImage, {
-      x: 0,
-      y: 0,
-      width: canvas.width,
-      height: canvas.height,
-    });
-
-    const pdfBytes = await pdfDoc.save();
-
-    const blob = new Blob([new Uint8Array(pdfBytes)], {
-      type: "application/pdf"
-    });
-
-    const url = URL.createObjectURL(blob);
-
-    const a = document.createElement("a");
-
-    a.href = url;
-    a.download = "redacted-secure.pdf";
-
-    a.click();
-
-    URL.revokeObjectURL(url);
-
-  } catch (error) {
-
-    console.error(error);
-
-  }
-
-  setLoading(false);
-};
-
+    setLoading(false);
+  };
 
   return (
+    <div className="max-w-4xl mx-auto py-12 px-4">
 
-    <div className="min-h-screen flex flex-col items-center p-6">
+      {/* Header */}
+      <div className="text-center mb-10">
+        <div className="inline-flex p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-4">
+          <Shield className="w-8 h-8" />
+        </div>
 
-      <h1 className="text-3xl font-bold mb-6">
-        PDF Redactor Tool
-      </h1>
+        <h1 className="text-3xl font-bold text-gray-900">
+          PDF Redactor
+        </h1>
 
-      <input
-        type="file"
-        accept="application/pdf"
-        onChange={handleFileChange}
-        className="mb-4"
-      />
-
-      {file && (
-        <p className="mb-4 text-sm text-gray-600">
-          Selected: {file.name}
+        <p className="mt-2 text-gray-600">
+          Securely redact sensitive information from your PDF.
         </p>
-      )}
-
-      {/* Canvas container */}
-      <div style={{ position: "relative" }}>
-
-        <canvas
-          ref={canvasRef}
-          className="border shadow max-w-full"
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-        />
-
-        {rectangles.map((rect, index) => (
-
-          <div
-            key={index}
-            style={{
-              position: "absolute",
-              left: rect.x,
-              top: rect.y,
-              width: rect.width,
-              height: rect.height,
-              backgroundColor: "black",
-              opacity: 1,
-              pointerEvents: "none",
-            }}
-          />
-
-        ))}
-
       </div>
 
-      <button
-        onClick={handleRedactPDF}
-        disabled={!file || rectangles.length === 0 || loading}
-        className="mt-6 bg-black text-white px-6 py-2 rounded disabled:opacity-50"
+      {/* Upload box */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`relative border-2 border-dashed rounded-3xl p-10 text-center transition ${
+          isDraggingOver
+            ? "border-indigo-500 bg-indigo-50"
+            : "border-gray-200 bg-white hover:border-gray-300"
+        }`}
       >
-        {loading ? "Processing..." : "Redact and Download PDF"}
-      </button>
+        <input
+          type="file"
+          accept="application/pdf"
+          onChange={handleFileChange}
+          className="absolute inset-0 opacity-0 cursor-pointer"
+        />
+
+        <div className="flex flex-col items-center">
+          <FileUp className="w-10 h-10 text-gray-400 mb-3" />
+
+          <h3 className="font-semibold text-lg">
+            {file ? "Replace PDF file" : "Select PDF file"}
+          </h3>
+
+          <p className="text-sm text-gray-500">
+            Drag & drop or click to upload
+          </p>
+        </div>
+      </div>
+
+      {/* File info */}
+      {file && (
+        <div className="mt-6 flex items-center gap-2 text-gray-700">
+          <FileText className="w-5 h-5 text-indigo-600" />
+          {file.name}
+        </div>
+      )}
+
+      {/* Canvas */}
+      {file && (
+        <div className="mt-6 border rounded-xl shadow overflow-auto relative">
+          <canvas
+            ref={canvasRef}
+            className="max-w-full"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+          />
+
+          {rectangles.map((rect, index) => (
+            <div
+              key={index}
+              style={{
+                position: "absolute",
+                left: rect.x,
+                top: rect.y,
+                width: rect.width,
+                height: rect.height,
+                backgroundColor: "black",
+              }}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Button */}
+      {file && (
+        <div className="mt-8 flex justify-center">
+          <button
+            onClick={handleRedactPDF}
+            disabled={loading || rectangles.length === 0}
+            className="flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl shadow hover:bg-indigo-700 disabled:opacity-50"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin w-5 h-5" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Download className="w-5 h-5" />
+                Redact & Download
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
     </div>
   );
