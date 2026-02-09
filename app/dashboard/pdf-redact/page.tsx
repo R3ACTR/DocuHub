@@ -35,6 +35,8 @@ const [rectanglesByPage, setRectanglesByPage] = useState<{
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [tool, setTool] = useState<"redact" | "erase">("redact");
+
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 const [pdfDoc, setPdfDoc] = useState<any>(null);
@@ -129,29 +131,55 @@ const goToPrevPage = async () => {
 };
 
 
-  // Drawing logic
-  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
+const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+  const rect = e.currentTarget.getBoundingClientRect();
 
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+  const x = e.clientX - rect.left;
+  const y = e.clientY - rect.top;
 
-    setStartPoint({ x, y });
-    setIsDrawing(true);
+  // ERASE MODE
+  if (tool === "erase") {
+  setRectanglesByPage((prev) => {
+    const pageRects = prev[pageNumber] || [];
+
+    const filtered = pageRects.filter((r) => {
+      const padding = 4; // makes erase easier
+
+      return !(
+        x >= r.x - padding &&
+        x <= r.x + r.width + padding &&
+        y >= r.y - padding &&
+        y <= r.y + r.height + padding
+      );
+    });
+
+    return {
+      ...prev,
+      [pageNumber]: filtered,
+    };
+  });
+
+  return;
+}
+
+
+  // REDACT MODE
+  setStartPoint({ x, y });
+  setIsDrawing(true);
 
   setRectanglesByPage((prev) => {
-  const pageRects = prev[pageNumber] || [];
+    const pageRects = prev[pageNumber] || [];
 
-  return {
-    ...prev,
-    [pageNumber]: [
-      ...pageRects,
-      { x, y, width: 0, height: 0 },
-    ],
-  };
-});
+    return {
+      ...prev,
+      [pageNumber]: [
+        ...pageRects,
+        { x, y, width: 0, height: 0 },
+      ],
+    };
+  });
+};
 
-  };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isDrawing) return;
@@ -297,6 +325,33 @@ const goToPrevPage = async () => {
           {file.name}
         </div>
       )}
+      {/* Tool selector */}
+{file && (
+  <div className="flex gap-3 mt-4">
+    <button
+      onClick={() => setTool("redact")}
+      className={`px-4 py-2 rounded ${
+        tool === "redact"
+          ? "bg-indigo-600 text-white"
+          : "bg-gray-200"
+      }`}
+    >
+      Redact Tool
+    </button>
+
+    <button
+      onClick={() => setTool("erase")}
+      className={`px-4 py-2 rounded ${
+        tool === "erase"
+          ? "bg-red-600 text-white"
+          : "bg-gray-200"
+      }`}
+    >
+      Eraser Tool
+    </button>
+  </div>
+)}
+
 <div className="flex justify-between items-center mt-4">
   <button
     onClick={goToPrevPage}
@@ -335,6 +390,7 @@ const goToPrevPage = async () => {
               key={index}
               style={{
                 position: "absolute",
+                pointerEvents: "none",
                 left: rect.x,
                 top: rect.y,
                 width: rect.width,

@@ -47,7 +47,8 @@ export default function DocumentToPdfPage() {
     setFiles([]);
     setError("");
   };
-  const [isDragging, setIsDragging] = useState(false); // ✅ NEW
+
+  const [isDragging, setIsDragging] = useState(false);
 
   const handleConvert = async () => {
     if (!files[0]) return;
@@ -74,12 +75,6 @@ export default function DocumentToPdfPage() {
         const result = await mammoth.extractRawText({ arrayBuffer });
         text = result.value || "";
       } else {
-        text = await file.text();
-      }
-
-      if (!text.trim()) throw new Error("No readable text");
-
-        console.log("Text file detected");
         text = await file.text();
       }
 
@@ -165,19 +160,26 @@ export default function DocumentToPdfPage() {
       {/* Drag & Drop Zone */}
       <div
         onDrop={handleDrop}
-        onDragOver={(e) => e.preventDefault()}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
         onClick={() => fileInputRef.current?.click()}
         style={{
           marginTop: 20,
           padding: 40,
-          border: "2px solid #6c63ff",
+          border: isDragging ? "2px solid #4f46e5" : "2px dashed #6c63ff",
           borderRadius: 12,
           textAlign: "center",
           cursor: "pointer",
-          background: "#f6f7ff",
+          background: isDragging ? "#eef2ff" : "#f6f7ff",
+          transition: "all 0.2s ease",
         }}
       >
-        <p style={{ fontSize: 18 }}>📂 Drop file here or Click to Upload</p>
+        <p style={{ fontSize: 18 }}>
+          {isDragging ? "📂 Drop file here" : "📂 Drop file here or Click to Upload"}
+        </p>
       </div>
 
       {/* Error */}
@@ -219,56 +221,18 @@ export default function DocumentToPdfPage() {
 
       <br />
 
-      <button onClick={handleConvert} disabled={loading || !!error}>
-      {/* ✅ NEW DRAG + DROP AREA */}
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setIsDragging(true);
-        }}
-        onDragLeave={() => {
-          setIsDragging(false);
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          setIsDragging(false);
-
-          if (e.dataTransfer.files) {
-            setFiles(Array.from(e.dataTransfer.files));
-          }
-        }}
+      <button
+        onClick={handleConvert}
+        disabled={loading || !!error}
         style={{
-          border: isDragging ? "2px solid #4f46e5" : "2px dashed #aaa",
-          background: isDragging ? "#eef2ff" : "transparent",
-          padding: "40px",
-          textAlign: "center",
-          borderRadius: "10px",
-          transition: "all 0.2s ease",
-          cursor: "pointer",
-          marginTop: "20px"
+          padding: "12px 24px",
+          background: "#6c63ff",
+          color: "white",
+          border: "none",
+          borderRadius: 8,
+          cursor: loading || !!error ? "not-allowed" : "pointer",
         }}
       >
-        <input
-          type="file"
-          accept=".txt,.html,.json,.docx"
-          onChange={(e) => {
-            if (!e.target.files) return;
-            setFiles(Array.from(e.target.files));
-          }}
-          style={{ display: "none" }}
-          id="fileUpload"
-        />
-
-        <label htmlFor="fileUpload" style={{ cursor: "pointer" }}>
-          {isDragging
-            ? "Drop file here 📂"
-            : "Drag & drop file here OR Click to select"}
-        </label>
-      </div>
-
-      <br />
-
-      <button onClick={handleConvert} disabled={loading}>
         {loading ? "Converting..." : "Convert to PDF"}
       </button>
     </div>

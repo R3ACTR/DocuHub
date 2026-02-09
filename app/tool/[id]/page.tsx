@@ -1,16 +1,18 @@
 "use client";
 
-import Link from "next/link";
-import { ArrowLeft, FileText, Upload, Combine, Scissors, FileUp } from "lucide-react";
+import { ArrowLeft, Upload, Combine, Scissors, FileUp } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 
 export default function ToolUploadPage() {
   const router = useRouter();
   const params = useParams();
-  const toolId = Array.isArray(params.id) ? params.id[0] : (params.id as string);
+
+  const toolId = Array.isArray(params.id)
+    ? params.id[0]
+    : (params.id as string);
 
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -18,17 +20,17 @@ export default function ToolUploadPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   /* --------------------------------------------
-     Save last-used tool + reset resume dismiss
+     Remember last-used tool
   --------------------------------------------- */
   useEffect(() => {
     if (toolId && toolId !== "pdf-tools") {
       localStorage.setItem("lastUsedTool", toolId);
-      localStorage.removeItem("hideResumeFor");
+      localStorage.removeItem("hideResume");
     }
   }, [toolId]);
 
   /* --------------------------------------------
-     Warn on refresh / tab close if unsaved work
+     Warn before refresh / tab close
   --------------------------------------------- */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -38,9 +40,7 @@ export default function ToolUploadPage() {
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedWork]);
 
   const getSupportedTypes = () => {
@@ -96,30 +96,29 @@ export default function ToolUploadPage() {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
-          <h1 className="text-3xl font-semibold text-[#1e1e2e] mb-2">PDF Tools</h1>
-          <p className="text-muted-foreground text-lg mb-12">Choose a PDF tool</p>
+          <h1 className="text-3xl font-semibold mb-2">PDF Tools</h1>
+          <p className="text-muted-foreground mb-12">
+            Choose a PDF tool
+          </p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
             <ToolCard
               icon={Combine}
               title="Merge PDF"
-              description="Combine multiple PDFs into one"
+              description="Combine multiple PDFs"
               href="/dashboard/pdf-merge"
-              disabled={false}
             />
             <ToolCard
               icon={Scissors}
               title="Split PDF"
-              description="Split PDF into separate pages"
+              description="Split PDF pages"
               href="/dashboard/pdf-split"
-              disabled={false}
             />
             <ToolCard
               icon={FileUp}
               title="Document to PDF"
-              description="Convert documents into PDF format"
+              description="Convert documents to PDF"
               href="/dashboard/document-to-pdf"
-              disabled={false}
             />
           </div>
         </main>
@@ -135,13 +134,13 @@ export default function ToolUploadPage() {
       <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
         <button
           onClick={handleBackNavigation}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1e1e2e] mb-6"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
 
-        <h1 className="text-3xl font-semibold text-[#1e1e2e] mb-12">
+        <h1 className="text-3xl font-semibold mb-12">
           Upload your file
         </h1>
 
@@ -149,12 +148,16 @@ export default function ToolUploadPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="relative w-full rounded-2xl border-2 border-dashed border-[#ccdcdb] bg-[#eef6f5] hover:bg-[#e4eff0]"
+            className="relative w-full rounded-2xl border-2 border-dashed bg-[#eef6f5]"
           >
             <label className="flex flex-col items-center justify-center h-[400px] cursor-pointer">
               <Upload className="w-16 h-16 mb-4" />
-              <p className="text-xl font-medium">Drag & drop your file here</p>
-              <p className="text-muted-foreground">or click to browse</p>
+              <p className="text-xl font-medium">
+                Drag & drop your file here
+              </p>
+              <p className="text-muted-foreground">
+                or click to browse
+              </p>
               <input
                 type="file"
                 className="hidden"
@@ -169,7 +172,12 @@ export default function ToolUploadPage() {
           )}
 
           <div className="flex justify-between text-xs text-muted-foreground mt-4">
-            <span>Supported formats: {getSupportedTypes().join(", ") || "—"}</span>
+            <span>
+              Supported formats:{" "}
+              {getSupportedTypes().length
+                ? getSupportedTypes().join(", ")
+                : "—"}
+            </span>
             <span>Max file size: 10MB</span>
           </div>
         </div>
