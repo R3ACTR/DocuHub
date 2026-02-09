@@ -1,43 +1,17 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { PDFDocument, StandardFonts } from 'pdf-lib';
+import { useState } from "react";
+import { PDFDocument, StandardFonts } from "pdf-lib";
+import * as mammoth from "mammoth";
 
 export default function DocumentToPdfPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  };
-
-  const removeFile = (indexToRemove: number) => {
-    setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDragging(false);
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragging(false);
-
-    const droppedFiles = Array.from(e.dataTransfer.files);
-    setFiles((prev) => [...prev, ...droppedFiles]);
-  };
+  const [isDragging, setIsDragging] = useState(false); // ✅ NEW
 
   const handleConvert = async () => {
-    if (files.length === 0) {
-      alert('Please select a document file');
+    if (!files.length) {
+      alert("Select a file");
       return;
     }
 
@@ -45,146 +19,151 @@ export default function DocumentToPdfPage() {
 
     try {
       const file = files[0];
-      const text = await file.text();
+      let text = "";
 
+      console.log("Processing:", file.name);
+
+      // DOCX Support
+      if (file.name.toLowerCase().endsWith(".docx")) {
+        console.log("DOCX detected");
+
+        const arrayBuffer = await file.arrayBuffer();
+
+        const result = await mammoth.extractRawText({
+          arrayBuffer,
+        });
+
+        text = result.value || "";
+      } else {
+        console.log("Text file detected");
+        text = await file.text();
+      }
+
+      if (!text || text.trim().length === 0) {
+        throw new Error("No readable text found in file");
+      }
+
+      // Create PDF
       const pdfDoc = await PDFDocument.create();
-      const page = pdfDoc.addPage();
+      const page = pdfDoc.addPage([595, 842]);
 
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
       const fontSize = 12;
+      const margin = 50;
       const { width, height } = page.getSize();
 
-      page.drawText(text.slice(0, 5000), {
-        x: 50,
-        y: height - 50,
-        size: fontSize,
-        font: font,
-        maxWidth: width - 100,
-        lineHeight: 14,
-      });
+      const words = text.split(/\s+/);
+      let lines: string[] = [];
+      let currentLine = "";
+
+      for (const word of words) {
+        const testLine = currentLine + word + " ";
+        const textWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+        if (textWidth > width - margin * 2 && currentLine !== "") {
+          lines.push(currentLine);
+          currentLine = word + " ";
+        } else {
+          currentLine = testLine;
+        }
+      }
+
+      if (currentLine) lines.push(currentLine);
+
+      let y = height - margin;
+
+      for (const line of lines) {
+        if (y < margin) break;
+
+        page.drawText(line, {
+          x: margin,
+          y,
+          size: fontSize,
+          font,
+          maxWidth: width - margin * 2,
+        });
+
+        y -= fontSize + 6;
+      }
 
       const pdfBytes = await pdfDoc.save();
 
-      const blob = new Blob([pdfBytes], {
-        type: 'application/pdf',
-      });
-
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
 
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
       a.click();
 
       URL.revokeObjectURL(url);
 
+      console.log("PDF created successfully");
+
     } catch (err) {
-      console.error(err);
-      alert('Failed to convert document');
-    } finally {
-      setLoading(false);
+      console.error("CONVERSION ERROR:", err);
+      alert("Failed to convert document. Check console (F12).");
     }
+
+    setLoading(false);
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "600px",
-        margin: "40px auto",
-        padding: "24px",
-        border: isDragging ? "2px dashed #4f46e5" : "2px dashed #d1d5db",
-        backgroundColor: isDragging ? "#eef2ff" : "#fafafa",
-        borderRadius: "12px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-      }}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
+    <div style={{ maxWidth: 600, margin: "40px auto" }}>
+      <h1>Document to PDF</h1>
 
-      <h1 style={{
-        fontSize: "24px",
-        fontWeight: "600",
-        marginBottom: "6px",
-      }}>
-        Document to PDF
-      </h1>
-
-      <p style={{
-        color: "#6b7280",
-        fontSize: "14px",
-        marginBottom: "16px",
-      }}>
-        Convert document files into PDF format (client-side, offline).
-      </p>
-
-      <input
-        type="file"
-        accept=".txt,.html,.json"
-        onChange={(e) => {
-          if (!e.target.files) return;
-          setFiles(Array.from(e.target.files));
+      {/* ✅ NEW DRAG + DROP AREA */}
+      <div
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
         }}
-      />
+        onDragLeave={() => {
+          setIsDragging(false);
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          setIsDragging(false);
 
-      <p>{files.length} file(s) selected</p>
-
-      {files.map((file, index) => (
-        <div
-          key={index}
-          style={{
-            padding: "12px",
-            marginTop: "10px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            backgroundColor: "white",
-            display: "flex",
-            justifyContent: "space-between",
+          if (e.dataTransfer.files) {
+            setFiles(Array.from(e.dataTransfer.files));
+          }
+        }}
+        style={{
+          border: isDragging ? "2px solid #4f46e5" : "2px dashed #aaa",
+          background: isDragging ? "#eef2ff" : "transparent",
+          padding: "40px",
+          textAlign: "center",
+          borderRadius: "10px",
+          transition: "all 0.2s ease",
+          cursor: "pointer",
+          marginTop: "20px"
+        }}
+      >
+        <input
+          type="file"
+          accept=".txt,.html,.json,.docx"
+          onChange={(e) => {
+            if (!e.target.files) return;
+            setFiles(Array.from(e.target.files));
           }}
-        >
-          <div>
-            📄 {file.name}
-            <div style={{ fontSize: "12px", color: "#666" }}>
-              {formatFileSize(file.size)}
-            </div>
-          </div>
+          style={{ display: "none" }}
+          id="fileUpload"
+        />
 
-          <button
-            onClick={() => removeFile(index)}
-            style={{
-              backgroundColor: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
-          >
-            Remove
-          </button>
-
-        </div>
-      ))}
-
-      <div style={{ textAlign: "center" }}>
-        <button
-          onClick={handleConvert}
-          disabled={loading || files.length === 0}
-          style={{
-            marginTop: "20px",
-            backgroundColor: loading || files.length === 0 ? "#9ca3af" : "#4f46e5",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 18px",
-            cursor: loading || files.length === 0 ? "not-allowed" : "pointer",
-          }}
-        >
-          {loading ? "Converting..." : "Convert to PDF"}
-        </button>
+        <label htmlFor="fileUpload" style={{ cursor: "pointer" }}>
+          {isDragging
+            ? "Drop file here 📂"
+            : "Drag & drop file here OR Click to select"}
+        </label>
       </div>
 
+      <br />
+
+      <button onClick={handleConvert} disabled={loading}>
+        {loading ? "Converting..." : "Convert to PDF"}
+      </button>
     </div>
   );
 }
