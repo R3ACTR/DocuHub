@@ -1,7 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
-import * as pdfjsLib from "pdfjs-dist";
+import { useState, useRef, useEffect } from "react";
 import { PDFDocument } from "pdf-lib";
 import {
   FileUp,
@@ -10,14 +9,6 @@ import {
   Loader2,
   FileText,
 } from "lucide-react";
-
-// Worker setup
-if (typeof window !== "undefined") {
-  pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-    "pdfjs-dist/build/pdf.worker.min.mjs",
-    import.meta.url
-  ).toString();
-}
 
 interface Rect {
   x: number;
@@ -28,40 +19,60 @@ interface Rect {
 
 export default function PdfRedactPage() {
   const [file, setFile] = useState<File | null>(null);
-const [rectanglesByPage, setRectanglesByPage] = useState<{
-  [page: number]: Rect[];
-}>({});
+  const [rectanglesByPage, setRectanglesByPage] = useState<{
+    [page: number]: Rect[];
+  }>({});
   const [isDrawing, setIsDrawing] = useState(false);
   const [startPoint, setStartPoint] = useState({ x: 0, y: 0 });
   const [loading, setLoading] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [tool, setTool] = useState<"redact" | "erase">("redact");
 
-
   const canvasRef = useRef<HTMLCanvasElement>(null);
-const [pdfDoc, setPdfDoc] = useState<any>(null);
-const [pageNumber, setPageNumber] = useState(1);
-const rectangles = rectanglesByPage[pageNumber] || [];
-const [totalPages, setTotalPages] = useState(0);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const rectangles = rectanglesByPage[pageNumber] || [];
+  const [totalPages, setTotalPages] = useState(0);
+  const pdfjsRef = useRef<typeof import("pdfjs-dist") | null>(null);
+
+  // Load pdfjs-dist dynamically (client-only to avoid SSR crash)
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPdfJs = async () => {
+      const pdfjsLib = await import("pdfjs-dist");
+      if (cancelled) return;
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+        "pdfjs-dist/build/pdf.worker.min.mjs",
+        import.meta.url
+      ).toString();
+
+      pdfjsRef.current = pdfjsLib;
+    };
+
+    loadPdfJs();
+    return () => { cancelled = true; };
+  }, []);
 
   // Load PDF
   const loadPDF = async (selectedFile: File) => {
+    if (!pdfjsRef.current) return; // Wait until pdfjs is loaded
+
     setFile(selectedFile);
     setRectanglesByPage({});
 
-
     const arrayBuffer = await selectedFile.arrayBuffer();
 
-    const pdf = await pdfjsLib.getDocument({
-  data: arrayBuffer,
-}).promise;
+    const pdf = await pdfjsRef.current.getDocument({
+      data: arrayBuffer,
+    }).promise;
 
-setPdfDoc(pdf);
-setTotalPages(pdf.numPages);
-setPageNumber(1);
+    setPdfDoc(pdf);
+    setTotalPages(pdf.numPages);
+    setPageNumber(1);
 
-await renderPage(pdf, 1);
-
+    await renderPage(pdf, 1);
   };
 
   // File input change
@@ -115,11 +126,11 @@ await renderPage(pdf, 1);
   };
 
   const goToNextPage = async () => {
-  if (!pdfDoc || pageNumber >= totalPages) return;
+    if (!pdfDoc || pageNumber >= totalPages) return;
 
-  const nextPage = pageNumber + 1;
-  setPageNumber(nextPage);
-  await renderPage(pdfDoc, nextPage);
+    const nextPage = pageNumber + 1;
+    setPageNumber(nextPage);
+    await renderPage(pdfDoc, nextPage);
 };
 
 const goToPrevPage = async () => {
