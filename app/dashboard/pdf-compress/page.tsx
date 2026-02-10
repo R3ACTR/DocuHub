@@ -8,6 +8,9 @@ export default function PdfCompressPage() {
   const [file, setFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [originalSize, setOriginalSize] = useState<number | null>(null);
+const [compressedSize, setCompressedSize] = useState<number | null>(null);
+
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -16,7 +19,10 @@ export default function PdfCompressPage() {
     const droppedFile = e.dataTransfer.files[0];
 
     if (droppedFile && droppedFile.type === 'application/pdf') {
-      setFile(droppedFile);
+     setFile(droppedFile);
+setOriginalSize(droppedFile.size);
+setCompressedSize(null);
+
     }
   };
 
@@ -26,6 +32,8 @@ export default function PdfCompressPage() {
 
     if (selectedFile.type === 'application/pdf') {
       setFile(selectedFile);
+setOriginalSize(selectedFile.size);
+setCompressedSize(null);
     }
   };
 
@@ -52,7 +60,7 @@ export default function PdfCompressPage() {
       addDefaultPage: false,
       objectsPerTick: 20,
     });
-
+    setCompressedSize(compressedBytes.length);
     const blob = new Blob([new Uint8Array(compressedBytes)], {
       type: 'application/pdf',
     });
@@ -73,6 +81,9 @@ export default function PdfCompressPage() {
   }
 };
 
+const formatSize = (bytes: number) => {
+  return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+};
 
   return (
     <div className="max-w-3xl mx-auto py-12 px-4 text-center">
@@ -111,10 +122,27 @@ export default function PdfCompressPage() {
         </label>
 
         {file && (
-          <p className="mt-3 text-sm text-gray-600">
-            Selected: {file.name}
-          </p>
-        )}
+  <div className="mt-3 text-sm text-gray-600">
+    <p>Selected: {file.name}</p>
+
+    {originalSize && (
+      <p>Original size: {formatSize(originalSize)}</p>
+    )}
+
+    {compressedSize && (
+      <p>Compressed size: {formatSize(compressedSize)}</p>
+    )}
+
+    {originalSize && compressedSize && (
+      <p className="text-green-600 font-medium">
+        Reduction: {(
+          ((originalSize - compressedSize) / originalSize) * 100
+        ).toFixed(2)}%
+      </p>
+    )}
+  </div>
+)}
+
       </div>
 
       <button

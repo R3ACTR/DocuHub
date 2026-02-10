@@ -12,6 +12,7 @@ import {
 
 
 import { ToolCard } from "@/components/ToolCard";
+import { HelpTooltip } from "@/components/HelpTooltip";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -55,7 +56,8 @@ export default function ToolUploadPage() {
     };
 
     window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    return () =>
+      window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedWork]);
 
   const getSupportedTypes = () => {
@@ -72,7 +74,7 @@ export default function ToolUploadPage() {
     }
   };
 
-  const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -87,7 +89,7 @@ export default function ToolUploadPage() {
 
     if (file.size > MAX_FILE_SIZE) {
       setFileError(
-        `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max allowed: 10MB.`
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 10MB.`
       );
       e.target.value = "";
       return;
@@ -96,17 +98,6 @@ export default function ToolUploadPage() {
     setFileError(null);
     setSelectedFile(file);
     setHasUnsavedWork(true);
-    
-    // Don't auto-navigate - let user click "Process File" button
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDraggingOver(true);
-  };
-
-  const handleDragLeave = () => {
-    setIsDraggingOver(false);
   };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -116,19 +107,17 @@ export default function ToolUploadPage() {
     const file = e.dataTransfer.files?.[0];
     if (!file) return;
 
-    const allowedTypes = getSupportedTypes();
-    const extension = "." + file.name.split(".").pop()?.toLowerCase();
+    const allowed = getSupportedTypes();
+    const ext = "." + file.name.split(".").pop()?.toLowerCase();
 
-    if (allowedTypes.length && !allowedTypes.includes(extension)) {
-      setFileError(
-        `Unsupported file type. Allowed: ${allowedTypes.join(", ")}`
-      );
+    if (allowed.length && !allowed.includes(ext)) {
+      setFileError(`Unsupported file type. Allowed: ${allowed.join(", ")}`);
       return;
     }
 
     if (file.size > MAX_FILE_SIZE) {
       setFileError(
-        `File is too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max allowed: 10MB.`
+        `File too large (${(file.size / 1024 / 1024).toFixed(1)}MB). Max 10MB.`
       );
       return;
     }
@@ -138,26 +127,16 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
-  const handleClickUpload = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
     setIsProcessing(true);
-    setFileError(null);
-
     try {
-      const success = await storeFile(selectedFile);
-      if (success) {
-        router.push(`/tool/${toolId}/processing`);
-      } else {
-        setFileError("Failed to process file. Please try again.");
-      }
-    } catch (err) {
-      setFileError("An error occurred while processing the file.");
-      console.error(err);
+      const ok = await storeFile(selectedFile);
+      if (ok) router.push(`/tool/${toolId}/processing`);
+      else setFileError("Failed to process file.");
+    } catch {
+      setFileError("Unexpected error occurred.");
     } finally {
       setIsProcessing(false);
     }
@@ -174,43 +153,49 @@ export default function ToolUploadPage() {
   };
 
   /* --------------------------------------------
-     PDF TOOLS LANDING PAGE
+     PDF TOOLS PAGE
   --------------------------------------------- */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
-        <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
-          <h1 className="text-3xl font-semibold mb-2">PDF Tools</h1>
+        <main className="container mx-auto px-6 py-12 md:px-12">
+          <h1 className="flex items-center text-3xl font-semibold mb-2">
+            PDF Tools
+            <HelpTooltip text="Merge, split, protect PDFs. All processing happens locally in your browser." />
+          </h1>
           <p className="text-muted-foreground mb-12">
             Choose a PDF tool
           </p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            <ToolCard
-              icon={Combine}
-              title="Merge PDF"
-              description="Combine multiple PDFs"
-              href="/dashboard/pdf-merge"
-            />
-            <ToolCard
-              icon={Scissors}
-              title="Split PDF"
-              description="Split PDF pages"
-              href="/dashboard/pdf-split"
-            />
-            <ToolCard
-              icon={FileText}
-              title="Redact PDF"
-              description="Securely hide sensitive information in PDF"
-              href="/tool/pdf-redact"
-            />
+<ToolCard
+  icon={Combine}
+  title="Merge PDF"
+  description="Combine multiple PDFs"
+  href="/dashboard/pdf-merge"
+/>
 
-            <ToolCard
-              icon={FileUp}
-              title="Document to PDF"
-              description="Convert documents to PDF"
-              href="/dashboard/document-to-pdf"
-            />
+<ToolCard
+  icon={Scissors}
+  title="Split PDF"
+  description="Split PDF pages"
+  href="/dashboard/pdf-split"
+/>
+
+<ToolCard
+  icon={FileText}
+  title="Redact PDF"
+  description="Securely hide sensitive information in PDF"
+  href="/tool/pdf-redact"
+/>
+
+<ToolCard
+  icon={FileUp}
+  title="Document to PDF"
+  description="Convert documents to PDF"
+  href="/dashboard/document-to-pdf"
+/>
+
           </div>
         </main>
       </div>
@@ -222,84 +207,57 @@ export default function ToolUploadPage() {
   --------------------------------------------- */
   return (
     <div className="min-h-screen flex flex-col">
-      <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
+      <main className="container mx-auto px-6 py-12 md:px-12">
         <button
           onClick={handleBackNavigation}
-          className="inline-flex items-center gap-2 text-sm text-muted-foreground mb-6"
+          className="inline-flex items-center gap-2 text-sm mb-6"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Dashboard
         </button>
 
-        <h1 className="text-3xl font-semibold mb-12">
+        <h1 className="flex items-center text-3xl font-semibold mb-8">
           Upload your file
+          <HelpTooltip text="Files are processed locally. Nothing is uploaded to a server." />
         </h1>
 
         <motion.div
-          onClick={handleClickUpload}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
+          onClick={() => fileInputRef.current?.click()}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDraggingOver(true);
+          }}
+          onDragLeave={() => setIsDraggingOver(false)}
           onDrop={handleDrop}
-          className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer transition-colors ${
+          className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer ${
             isDraggingOver ? "border-blue-500 bg-blue-50" : "hover:border-gray-400"
           }`}
         >
-
           <Upload className="mx-auto mb-4" />
-
           <p>Drag & drop or click to browse</p>
-          <p className="text-sm text-gray-500 mt-2">
-            Supported: {getSupportedTypes().join(", ")}
-          </p>
-
           <input
-            type="file"
             ref={fileInputRef}
-            accept={getSupportedTypes().join(",")}
+            type="file"
             className="hidden"
+            accept={getSupportedTypes().join(",")}
             onChange={handleFile}
           />
-
         </motion.div>
 
         {selectedFile && (
           <div className="mt-4">
-
             <p className="font-medium">{selectedFile.name}</p>
-            <p className="text-sm text-gray-500">
-              {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-            </p>
-
             <button
               onClick={handleProcessFile}
               disabled={isProcessing}
-              className="mt-3 px-4 py-2 bg-black text-white rounded disabled:opacity-50 flex items-center gap-2"
+              className="mt-3 px-4 py-2 bg-black text-white rounded flex items-center gap-2"
             >
-              {isProcessing ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                "Process File"
-              )}
+              {isProcessing ? <Loader2 className="animate-spin" /> : "Process File"}
             </button>
           </div>
         )}
 
-        {fileError && (
-          <p className="mt-3 text-sm text-red-600">{fileError}</p>
-        )}
-
-        <div className="flex justify-between text-xs text-muted-foreground mt-4">
-          <span>
-            Supported formats:{" "}
-            {getSupportedTypes().length
-              ? getSupportedTypes().join(", ")
-              : "—"}
-          </span>
-          <span>Max file size: 10MB</span>
-        </div>
+        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
       </main>
     </div>
   );

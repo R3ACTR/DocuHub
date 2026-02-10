@@ -63,6 +63,11 @@ export default function DocumentToPdfPage() {
   const handleRemoveFile = () => {
     setFiles([]);
     setError("");
+
+    // ✅ BUG FIX — Reset file input so same file type can be uploaded again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const [isDragging, setIsDragging] = useState(false);
@@ -169,7 +174,6 @@ export default function DocumentToPdfPage() {
     <div style={{ maxWidth: 650, margin: "40px auto" }}>
       <h1>Document to PDF</h1>
 
-      {/* Hidden File Input */}
       <input
         ref={fileInputRef}
         type="file"
@@ -178,7 +182,6 @@ export default function DocumentToPdfPage() {
         style={{ display: "none" }}
       />
 
-      {/* Drag & Drop Zone */}
       <div
         onDrop={handleDrop}
         onDragOver={(e) => {
@@ -203,14 +206,12 @@ export default function DocumentToPdfPage() {
         </p>
       </div>
 
-      {/* Error */}
       {error && (
         <p style={{ color: "red", marginTop: 10 }}>
           ❌ {error}
         </p>
       )}
 
-      {/* Preview */}
       {files[0] && (
         <div
           style={{
