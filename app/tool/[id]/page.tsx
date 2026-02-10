@@ -7,7 +7,9 @@ import {
   Scissors,
   FileUp,
   Loader2,
+  FileText   // ← ADD THIS
 } from "lucide-react";
+
 
 import { ToolCard } from "@/components/ToolCard";
 import { HelpTooltip } from "@/components/HelpTooltip";
@@ -166,9 +168,34 @@ export default function ToolUploadPage() {
           </p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            <ToolCard icon={Combine} title="Merge PDF" description="Combine PDFs" href="/dashboard/pdf-merge" />
-            <ToolCard icon={Scissors} title="Split PDF" description="Split pages" href="/dashboard/pdf-split" />
-            <ToolCard icon={FileUp} title="Document to PDF" description="Convert docs" href="/dashboard/document-to-pdf" />
+<ToolCard
+  icon={Combine}
+  title="Merge PDF"
+  description="Combine multiple PDFs"
+  href="/dashboard/pdf-merge"
+/>
+
+<ToolCard
+  icon={Scissors}
+  title="Split PDF"
+  description="Split PDF pages"
+  href="/dashboard/pdf-split"
+/>
+
+<ToolCard
+  icon={FileText}
+  title="Redact PDF"
+  description="Securely hide sensitive information in PDF"
+  href="/tool/pdf-redact"
+/>
+
+<ToolCard
+  icon={FileUp}
+  title="Document to PDF"
+  description="Convert documents to PDF"
+  href="/dashboard/document-to-pdf"
+/>
+
           </div>
         </main>
       </div>
