@@ -10,6 +10,8 @@ export default function PdfCompressPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [originalSize, setOriginalSize] = useState<number | null>(null);
 const [compressedSize, setCompressedSize] = useState<number | null>(null);
+const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
 
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -23,6 +25,10 @@ const [compressedSize, setCompressedSize] = useState<number | null>(null);
 setOriginalSize(droppedFile.size);
 setCompressedSize(null);
 
+const url = URL.createObjectURL(droppedFile);
+setPreviewUrl(url);
+
+
     }
   };
 
@@ -34,6 +40,10 @@ setCompressedSize(null);
       setFile(selectedFile);
 setOriginalSize(selectedFile.size);
 setCompressedSize(null);
+
+const url = URL.createObjectURL(selectedFile);
+setPreviewUrl(url);
+
     }
   };
 
@@ -121,26 +131,38 @@ const formatSize = (bytes: number) => {
           <p>Select or Drop PDF</p>
         </label>
 
-        {file && (
-  <div className="mt-3 text-sm text-gray-600">
-    <p>Selected: {file.name}</p>
+{file && (
+  <>
+    <div className="mt-3 text-sm text-gray-600">
+      <p>Selected: {file.name}</p>
 
-    {originalSize && (
-      <p>Original size: {formatSize(originalSize)}</p>
-    )}
+      {originalSize && (
+        <p>Original size: {formatSize(originalSize)}</p>
+      )}
 
-    {compressedSize && (
-      <p>Compressed size: {formatSize(compressedSize)}</p>
-    )}
+      {compressedSize && (
+        <p>Compressed size: {formatSize(compressedSize)}</p>
+      )}
 
-    {originalSize && compressedSize && (
-      <p className="text-green-600 font-medium">
-        Reduction: {(
-          ((originalSize - compressedSize) / originalSize) * 100
-        ).toFixed(2)}%
-      </p>
+      {originalSize && compressedSize && (
+        <p className="text-green-600 font-medium">
+          Reduction: {(
+            ((originalSize - compressedSize) / originalSize) * 100
+          ).toFixed(2)}%
+        </p>
+      )}
+    </div>
+
+    {previewUrl && (
+      <div className="mt-6">
+        <p className="text-sm text-gray-600 mb-2">Preview:</p>
+        <iframe
+          src={previewUrl}
+          className="w-full h-64 border rounded-lg"
+        />
+      </div>
     )}
-  </div>
+  </>
 )}
 
       </div>
