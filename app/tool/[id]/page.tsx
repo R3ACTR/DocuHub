@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 
 import { ToolCard } from "@/components/ToolCard";
-import { HelpTooltip } from "@/components/HelpTooltip";
+// ❌ Removed HelpTooltip import
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -33,9 +33,6 @@ export default function ToolUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  /* --------------------------------------------
-     Remember last-used tool
-  --------------------------------------------- */
   useEffect(() => {
     if (toolId && toolId !== "pdf-tools") {
       localStorage.setItem("lastUsedTool", toolId);
@@ -43,9 +40,6 @@ export default function ToolUploadPage() {
     }
   }, [toolId]);
 
-  /* --------------------------------------------
-     Warn before refresh / tab close
-  --------------------------------------------- */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -150,16 +144,12 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
-  /* --------------------------------------------
-     PDF TOOLS PAGE
-  --------------------------------------------- */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="container mx-auto px-6 py-12 md:px-12">
           <h1 className="flex items-center text-3xl font-semibold mb-2">
             PDF Tools
-            <HelpTooltip text="Merge, split, protect PDFs. All processing happens locally in your browser." />
           </h1>
           <p className="text-muted-foreground mb-12">
             Choose a PDF tool
@@ -175,9 +165,6 @@ export default function ToolUploadPage() {
     );
   }
 
-  /* --------------------------------------------
-     GENERIC UPLOAD PAGE
-  --------------------------------------------- */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -191,7 +178,6 @@ export default function ToolUploadPage() {
 
         <h1 className="flex items-center text-3xl font-semibold mb-8">
           Upload your file
-          <HelpTooltip text="Files are processed locally. Nothing is uploaded to a server." />
         </h1>
 
         <motion.div

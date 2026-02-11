@@ -7,13 +7,19 @@ interface ToolCardProps {
     description: string;
     href: string;
     disabled?: boolean;
+    active?: boolean; // ✅ Added
 }
 
-export function ToolCard({ icon: Icon, title, description, href, disabled }: ToolCardProps) {
+export function ToolCard({ icon: Icon, title, description, href, disabled, active }: ToolCardProps) {
     return (
         <Link
             href={disabled ? "#" : href}
-            className={`group relative flex items-center justify-between p-6 rounded-2xl border border-white/40 bg-white/40 backdrop-blur-sm transition-all hover:bg-white/60 hover:shadow-sm hover:border-white/60 ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+            className={`group relative flex items-center justify-between p-6 rounded-2xl border backdrop-blur-sm transition-all
+            ${active
+                ? 'border-blue-500 bg-blue-50 shadow-md'
+                : 'border-white/40 bg-white/40 hover:bg-white/60 hover:shadow-sm hover:border-white/60'
+            }
+            ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
         >
             <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-transparent sm:bg-transparent text-[#4a5568]">
