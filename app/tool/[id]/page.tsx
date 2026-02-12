@@ -1,4 +1,8 @@
 "use client";
+<<<<<<< persist-tool-state
+=======
+import { Minimize2, X } from "lucide-react";
+>>>>>>> main
 
 import Link from "next/link";
 import {
@@ -156,9 +160,20 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
+<<<<<<< persist-tool-state
   /* --------------------------------------------
      PROCESS FILE
   --------------------------------------------- */
+=======
+  /* REMOVE FILE */
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFiles([]);
+    setHasUnsavedWork(false);
+  };
+
+  /* PROCESS FILE */
+>>>>>>> main
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
@@ -246,6 +261,8 @@ export default function ToolUploadPage() {
         </h1>
 
         <motion.div
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
@@ -255,7 +272,7 @@ export default function ToolUploadPage() {
           className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer ${
             isDraggingOver
               ? "border-blue-500 bg-blue-50"
-              : "hover:border-gray-400"
+              : "hover:border-gray-400 hover:bg-gray-50"
           }`}
         >
           <Upload className="mx-auto mb-4" />
@@ -274,8 +291,40 @@ export default function ToolUploadPage() {
         </motion.div>
 
         {selectedFile && (
+<<<<<<< persist-tool-state
           <div className="mt-4">
             <p className="font-medium">{selectedFile.name}</p>
+=======
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm">
+              <FileText className="w-8 h-8 text-blue-500" />
+
+              <div className="flex-1">
+                <p className="font-medium text-gray-900">{selectedFile.name}</p>
+                <p className="text-sm text-gray-500">
+                  {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                </p>
+              </div>
+
+              <button
+                onClick={handleRemoveFile}
+                className="p-2 hover:bg-red-50 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-red-500" />
+              </button>
+
+              {isProcessing && (
+                <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
+              )}
+            </div>
+
+            {isProcessing && (
+              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                <div className="h-full bg-blue-600 animate-pulse w-full" />
+              </div>
+            )}
+
+>>>>>>> main
             <button
               onClick={handleProcessFile}
               disabled={isProcessing}
