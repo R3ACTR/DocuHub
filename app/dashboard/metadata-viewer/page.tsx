@@ -33,62 +33,103 @@ export default function MetadataViewerPage() {
   };
 
   return (
-    <div className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6">
+  <div className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900">
 
-        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
-          <FileText className="w-6 h-6" />
-          Metadata Viewer
-        </h1>
+    <div className="max-w-xl mx-auto bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6">
 
-        <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 cursor-pointer hover:border-blue-500 transition">
+      <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
+        <FileText className="w-6 h-6" />
+        Metadata Viewer
+      </h1>
 
-          <FileUp className="w-8 h-8 mb-2" />
+      <label className="flex flex-col items-center justify-center border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 cursor-pointer hover:border-blue-500 transition">
 
-          <span className="text-gray-600 dark:text-gray-300">
-            Click to upload a file
-          </span>
+        <FileUp className="w-8 h-8 mb-2" />
 
-          <input
-            type="file"
-            className="hidden"
-            onChange={handleFileChange}
-          />
-        </label>
+        <span className="text-gray-600 dark:text-gray-300">
+          Click to upload a file
+        </span>
 
-        {file && (
-          <div className="mt-6 space-y-2">
+        <input
+          type="file"
+          className="hidden"
+          onChange={handleFileChange}
+        />
 
-            <div>
-              <strong>Name:</strong> {file.name}
-            </div>
+      </label>
 
-            <div>
-              <strong>Type:</strong> {file.type || 'Unknown'}
-            </div>
+      {file && (
+        <div className="mt-6 space-y-2">
 
-            <div>
-              <strong>Size:</strong> {formatSize(file.size)}
-            </div>
-
-            <div>
-              <strong>Last Modified:</strong>{' '}
-              {new Date(file.lastModified).toLocaleString()}
-            </div>
-
+          <div>
+            <strong>Name:</strong> {file.name}
           </div>
-        )}
 
-      </div>
+          <div>
+            <strong>Type:</strong> {file.type || 'Unknown'}
+          </div>
+
+          <div>
+            <strong>Size:</strong> {formatSize(file.size)}
+          </div>
+
+          <div>
+            <strong>Last Modified:</strong>{' '}
+            {new Date(file.lastModified).toLocaleString()}
+          </div>
+
+        </div>
+      )}
+
+      {/* FILE PREVIEW */}
+      {file && (
+        <div className="mt-6">
+
+          <strong>File Preview:</strong>
+
+          {/* Image preview */}
+          {file.type.startsWith("image/") && (
+            <img
+              src={URL.createObjectURL(file)}
+              alt="Preview"
+              className="mt-2 rounded-lg max-h-64"
+            />
+          )}
+
+          {/* PDF preview */}
+          {file.type === "application/pdf" && (
+            <iframe
+              src={URL.createObjectURL(file)}
+              className="mt-2 w-full h-64 rounded-lg"
+            />
+          )}
+
+          {/* Text preview */}
+          {file.type.startsWith("text/") && (
+            <iframe
+              src={URL.createObjectURL(file)}
+              className="mt-2 w-full h-64 rounded-lg"
+            />
+          )}
+
+        </div>
+      )}
+
+      {/* METADATA */}
       {metadata && (
-  <div className="mt-4">
-    <strong>Detailed Metadata:</strong>
-    <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded mt-2 text-xs overflow-auto">
-      {JSON.stringify(metadata, null, 2)}
-    </pre>
-  </div>
-)}
+        <div className="mt-4">
+
+          <strong>Detailed Metadata:</strong>
+
+          <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded mt-2 text-xs overflow-auto">
+            {JSON.stringify(metadata, null, 2)}
+          </pre>
+
+        </div>
+      )}
 
     </div>
+
+  </div>
   );
 }
