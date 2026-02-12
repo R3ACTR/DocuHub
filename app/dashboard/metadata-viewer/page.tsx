@@ -2,15 +2,29 @@
 
 import { useState } from 'react';
 import { FileUp, FileText } from 'lucide-react';
+import * as exifr from 'exifr';
+
 
 export default function MetadataViewerPage() {
   const [file, setFile] = useState<File | null>(null);
+  const [metadata, setMetadata] = useState<any>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setFile(e.target.files[0]);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  if (e.target.files && e.target.files.length > 0) {
+    const selectedFile = e.target.files[0];
+    setFile(selectedFile);
+
+    try {
+      const meta = await exifr.parse(selectedFile);
+      setMetadata(meta);
+    } catch (error) {
+      console.log("Metadata extraction failed:", error);
+      setMetadata(null);
     }
-  };
+  }
+};
+
 
   const formatSize = (size: number) => {
     if (size < 1024) return size + ' bytes';
@@ -66,6 +80,15 @@ export default function MetadataViewerPage() {
         )}
 
       </div>
+      {metadata && (
+  <div className="mt-4">
+    <strong>Detailed Metadata:</strong>
+    <pre className="bg-gray-100 dark:bg-gray-700 p-3 rounded mt-2 text-xs overflow-auto">
+      {JSON.stringify(metadata, null, 2)}
+    </pre>
+  </div>
+)}
+
     </div>
   );
 }
