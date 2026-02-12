@@ -43,7 +43,6 @@ export default function ToolUploadPage() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  // Persisted metadata only (safe to store)
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
     name: string;
     size: number;
@@ -64,9 +63,7 @@ export default function ToolUploadPage() {
     if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
   }, [toolId]);
 
-  /* --------------------------------------------
-     Persist state
-  --------------------------------------------- */
+  /* Persist state */
   useEffect(() => {
     if (!toolId || !selectedFile) return;
 
@@ -79,9 +76,7 @@ export default function ToolUploadPage() {
     });
   }, [toolId, selectedFile]);
 
-  /* --------------------------------------------
-     Warn before refresh
-  --------------------------------------------- */
+  /* Warn before refresh */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -109,9 +104,7 @@ export default function ToolUploadPage() {
     }
   };
 
-  /* --------------------------------------------
-     FILE INPUT
-  --------------------------------------------- */
+  /* Handle file select */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -136,9 +129,7 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
-  /* --------------------------------------------
-     ✅ CONFIRMED CLEAR / RESET TOOL
-  --------------------------------------------- */
+  /* Clear file */
   const handleRemoveFile = () => {
     const confirmed = window.confirm(
       "This will remove your uploaded file and reset the tool. Continue?"
@@ -154,9 +145,7 @@ export default function ToolUploadPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  /* --------------------------------------------
-     PROCESS FILE
-  --------------------------------------------- */
+  /* Process file */
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
@@ -188,31 +177,65 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
-  /* --------------------------------------------
-     PDF TOOLS PAGE
-  --------------------------------------------- */
+  /* PDF Tools Page */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="container mx-auto px-6 py-12 md:px-12">
           <h1 className="text-3xl font-semibold mb-2">PDF Tools</h1>
-          <p className="text-muted-foreground mb-12">Choose a PDF tool</p>
+          <p className="text-muted-foreground mb-12">
+            Choose a PDF tool
+          </p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            <ToolCard icon={Combine} title="Merge PDF" description="Combine PDFs" href="/dashboard/pdf-merge" />
-            <ToolCard icon={Minimize2} title="Compress PDF" description="Reduce file size" href="/tool/pdf-compress" />
-            <ToolCard icon={Scissors} title="Split PDF" description="Split pages" href="/dashboard/pdf-split" />
-            <ToolCard icon={FileText} title="Protect PDF" description="Add password" href="/tool/pdf-protect" />
-            <ToolCard icon={FileUp} title="Document to PDF" description="Convert to PDF" href="/dashboard/document-to-pdf" />
+            <ToolCard
+              icon={Combine}
+              title="Merge PDF"
+              description="Combine PDFs"
+              href="/dashboard/pdf-merge"
+            />
+
+            <ToolCard
+              icon={Minimize2}
+              title="Compress PDF"
+              description="Reduce file size"
+              href="/tool/pdf-compress"
+            />
+
+            <ToolCard
+              icon={Scissors}
+              title="Split PDF"
+              description="Split pages"
+              href="/dashboard/pdf-split"
+            />
+
+            <ToolCard
+              icon={FileText}
+              title="Protect PDF"
+              description="Add password"
+              href="/tool/pdf-protect"
+            />
+
+            <ToolCard
+              icon={FileText}
+              title="Metadata Viewer"
+              description="View PDF metadata details"
+              href="/dashboard/metadata-viewer"
+            />
+
+            <ToolCard
+              icon={FileUp}
+              title="Document to PDF"
+              description="Convert to PDF"
+              href="/dashboard/document-to-pdf"
+            />
           </div>
         </main>
       </div>
     );
   }
 
-  /* --------------------------------------------
-     UPLOAD PAGE
-  --------------------------------------------- */
+  /* Upload Page */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -224,7 +247,9 @@ export default function ToolUploadPage() {
           Back to Dashboard
         </button>
 
-        <h1 className="text-3xl font-semibold mb-8">Upload your file</h1>
+        <h1 className="text-3xl font-semibold mb-8">
+          Upload your file
+        </h1>
 
         <motion.div
           onClick={() => fileInputRef.current?.click()}
@@ -321,7 +346,11 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
+        {fileError && (
+          <p className="mt-3 text-sm text-red-600">
+            {fileError}
+          </p>
+        )}
       </main>
     </div>
   );
