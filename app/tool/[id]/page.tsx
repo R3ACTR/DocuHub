@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   ArrowLeft,
   Upload,
@@ -40,6 +39,11 @@ export default function ToolUploadPage() {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const [compressionLevel, setCompressionLevel] = useState<
+    "low" | "medium" | "high"
+  >("medium");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -129,6 +133,7 @@ export default function ToolUploadPage() {
     setSelectedFile(null);
     setPersistedFileMeta(null);
     setFileError(null);
+    setPassword("");
     clearToolState(toolId);
     setHasUnsavedWork(false);
 
@@ -144,10 +149,20 @@ export default function ToolUploadPage() {
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
+    if (toolId === "pdf-protect" && !password.trim()) {
+      setFileError("Please enter a password to protect the PDF.");
+      return;
+    }
+
     setIsProcessing(true);
 
     try {
-      const ok = await storeFile(selectedFile);
+      const ok = await storeFile(selectedFile, {
+        password: toolId === "pdf-protect" ? password : undefined,
+        compressionLevel:
+          toolId === "pdf-compress" ? compressionLevel : undefined,
+      });
+
       if (ok) {
         clearToolState(toolId);
         router.push(`/tool/${toolId}/processing`);
@@ -183,7 +198,7 @@ export default function ToolUploadPage() {
             <ToolCard icon={Combine} title="Merge PDF" description="Combine PDFs" href="/dashboard/pdf-merge" />
             <ToolCard icon={Minimize2} title="Compress PDF" description="Reduce file size" href="/tool/pdf-compress" />
             <ToolCard icon={Scissors} title="Split PDF" description="Split pages" href="/dashboard/pdf-split" />
-            <ToolCard icon={FileText} title="Protect PDF" description="Add password" href="/tool/pdf-protect" />
+            <ToolCard icon={FileText} title="Protect PDF" description="Add password protection" href="/tool/pdf-protect" />
             <ToolCard icon={FileUp} title="Document to PDF" description="Convert to PDF" href="/dashboard/document-to-pdf" />
           </div>
         </main>
@@ -233,7 +248,7 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {/* EMPTY STATE HINT */}
+        {/* Empty-state hint */}
         {!selectedFile && (
           <p className="mt-6 text-sm text-muted-foreground text-center">
             No file selected. Upload a file to continue.
@@ -244,7 +259,6 @@ export default function ToolUploadPage() {
           <div className="mt-6 space-y-4">
             <div className="flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm">
               <FileText className="w-8 h-8 text-blue-500" />
-
               <div className="flex-1">
                 <p className="font-medium">{selectedFile.name}</p>
                 <p className="text-sm text-gray-500">
@@ -266,6 +280,20 @@ export default function ToolUploadPage() {
                 Remove
               </button>
             </div>
+
+            {toolId === "pdf-protect" && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <label className="block text-sm font-medium mb-2">
+                  Enter Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full border rounded-lg px-3 py-2 text-sm"
+                />
+              </div>
+            )}
 
             <button
               onClick={handleProcessFile}
