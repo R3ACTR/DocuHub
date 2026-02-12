@@ -1,5 +1,5 @@
 "use client";
-import { Minimize2 } from "lucide-react";
+import { Minimize2, X } from "lucide-react";
 
 import {
   ArrowLeft,
@@ -169,6 +169,13 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
+  /* REMOVE FILE */
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+    setFiles([]);
+    setHasUnsavedWork(false);
+  };
+
   /* PROCESS FILE */
   const handleProcessFile = async () => {
     if (!selectedFile) return;
@@ -236,6 +243,8 @@ export default function ToolUploadPage() {
         <h1 className="text-3xl font-semibold mb-8">Upload your file</h1>
 
         <motion.div
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.99 }}
           onClick={() => fileInputRef.current?.click()}
           onDragOver={(e) => {
             e.preventDefault();
@@ -246,7 +255,7 @@ export default function ToolUploadPage() {
           className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer transition ${
             isDraggingOver
               ? "border-blue-500 bg-blue-50"
-              : "hover:border-gray-400"
+              : "hover:border-gray-400 hover:bg-gray-50"
           }`}
         >
           <Upload className="mx-auto mb-4" />
@@ -271,6 +280,13 @@ export default function ToolUploadPage() {
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               </div>
+
+              <button
+                onClick={handleRemoveFile}
+                className="p-2 hover:bg-red-50 rounded-lg transition"
+              >
+                <X className="w-5 h-5 text-red-500" />
+              </button>
 
               {isProcessing && (
                 <Loader2 className="w-5 h-5 animate-spin text-blue-500" />
