@@ -29,6 +29,7 @@ interface FileWithId {
 export default function PdfMergePage() {
   const [filesWithIds, setFilesWithIds] = useState<FileWithId[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   const sensors = useSensors(
@@ -67,7 +68,7 @@ export default function PdfMergePage() {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
-    
+
     const selectedFiles = Array.from(e.target.files).filter(
       (file) => file.type === 'application/pdf'
     );
@@ -78,7 +79,6 @@ export default function PdfMergePage() {
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
-    // Reset input value to allow selecting the same file again
     e.target.value = '';
   };
 
@@ -110,18 +110,27 @@ export default function PdfMergePage() {
     }
 
     setLoading(true);
+    setUploadProgress(10);
 
     try {
       const mergedPdf = await PDFDocument.create();
+
+      let processed = 0;
 
       for (const item of filesWithIds) {
         const bytes = await item.file.arrayBuffer();
         const pdf = await PDFDocument.load(bytes);
         const pages = await mergedPdf.copyPages(pdf, pdf.getPageIndices());
         pages.forEach((page: PDFPage) => mergedPdf.addPage(page));
+
+        processed++;
+        const progress = 10 + (processed / filesWithIds.length) * 80;
+        setUploadProgress(progress);
       }
 
       const mergedBytes = await mergedPdf.save();
+      setUploadProgress(95);
+
       const blob = new Blob([new Uint8Array(mergedBytes)], {
         type: 'application/pdf',
       });
@@ -132,11 +141,16 @@ export default function PdfMergePage() {
       a.download = 'merged.pdf';
       a.click();
       URL.revokeObjectURL(url);
+
+      setUploadProgress(100);
     } catch (err) {
       console.error(err);
       alert('Failed to merge PDFs');
     } finally {
-      setLoading(false);
+      setTimeout(() => {
+        setLoading(false);
+        setUploadProgress(0);
+      }, 600);
     }
   };
 
@@ -151,6 +165,20 @@ export default function PdfMergePage() {
           Combine multiple PDF documents into a single file. Reorder them as needed.
         </p>
       </div>
+
+      {loading && (
+        <div className="mb-6">
+          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+            <div
+              className="h-full bg-indigo-600 transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          <p className="text-sm text-gray-500 mt-2 text-center">
+            Processing... {Math.round(uploadProgress)}%
+          </p>
+        </div>
+      )}
 
       <div
         onDragOver={handleDragOver}
@@ -183,7 +211,7 @@ export default function PdfMergePage() {
           <div className="mt-6">
             <label
               htmlFor="file-upload"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 cursor-pointer"
+              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
             >
               Choose Files
             </label>
@@ -191,6 +219,7 @@ export default function PdfMergePage() {
         </div>
       </div>
 
+      {/* ✅ RESTORED FILE LIST + MERGE BUTTON */}
       {filesWithIds.length > 0 && (
         <div className="mt-12 space-y-6">
           <div className="flex items-center justify-between">
@@ -237,7 +266,7 @@ export default function PdfMergePage() {
             <button
               onClick={handleMerge}
               disabled={loading || filesWithIds.length < 2}
-              className={`group relative flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[200px] justify-center overflow-hidden`}
+              className="group relative flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[200px] justify-center overflow-hidden"
             >
               {loading ? (
                 <>
@@ -252,12 +281,6 @@ export default function PdfMergePage() {
               )}
             </button>
           </div>
-          
-          {filesWithIds.length < 2 && !loading && (
-            <p className="text-center text-sm text-gray-500 mt-2">
-              Select at least 2 PDF files to enable merging
-            </p>
-          )}
         </div>
       )}
     </div>
