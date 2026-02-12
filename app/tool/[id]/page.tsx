@@ -41,6 +41,10 @@ export default function ToolUploadPage() {
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
   const [password, setPassword] = useState("");
 
+  const [compressionLevel, setCompressionLevel] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
@@ -49,14 +53,14 @@ export default function ToolUploadPage() {
     type: string;
   } | null>(null);
 
-  /* Restore state */
+  /* ---------------- Restore persisted state ---------------- */
   useEffect(() => {
     if (!toolId) return;
     const stored = loadToolState(toolId);
     if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
   }, [toolId]);
 
-  /* Persist state */
+  /* ---------------- Persist state ---------------- */
   useEffect(() => {
     if (!toolId || !selectedFile) return;
 
@@ -69,7 +73,7 @@ export default function ToolUploadPage() {
     });
   }, [toolId, selectedFile]);
 
-  /* Warn before refresh */
+  /* ---------------- Warn before refresh ---------------- */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -82,6 +86,7 @@ export default function ToolUploadPage() {
       window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [hasUnsavedWork]);
 
+  /* ---------------- Supported Types ---------------- */
   const getSupportedTypes = () => {
     switch (toolId) {
       case "ocr":
@@ -97,6 +102,7 @@ export default function ToolUploadPage() {
     }
   };
 
+  /* ---------------- Handle File ---------------- */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -121,11 +127,11 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
+  /* ---------------- Remove File ---------------- */
   const handleRemoveFile = () => {
     const confirmed = window.confirm(
       "This will remove your uploaded file and reset the tool. Continue?"
     );
-
     if (!confirmed) return;
 
     setSelectedFile(null);
@@ -135,11 +141,15 @@ export default function ToolUploadPage() {
     clearToolState(toolId);
     setHasUnsavedWork(false);
 
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
+  /* ---------------- Replace File ---------------- */
+  const handleReplaceFile = () => {
+    fileInputRef.current?.click();
+  };
+
+  /* ---------------- Process File ---------------- */
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
@@ -153,6 +163,8 @@ export default function ToolUploadPage() {
     try {
       const ok = await storeFile(selectedFile, {
         password: toolId === "pdf-protect" ? password : undefined,
+        compressionLevel:
+          toolId === "pdf-compress" ? compressionLevel : undefined,
       });
 
       if (ok) {
@@ -168,6 +180,7 @@ export default function ToolUploadPage() {
     }
   };
 
+  /* ---------------- Back Navigation ---------------- */
   const handleBackNavigation = () => {
     if (hasUnsavedWork) {
       const confirmLeave = window.confirm(
@@ -178,7 +191,9 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
-  /* PDF Tools Menu */
+  /* =========================================================
+     PDF TOOLS PAGE
+  ========================================================= */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
@@ -198,7 +213,9 @@ export default function ToolUploadPage() {
     );
   }
 
-  /* Upload Page */
+  /* =========================================================
+     UPLOAD PAGE
+  ========================================================= */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -219,7 +236,7 @@ export default function ToolUploadPage() {
             setIsDraggingOver(true);
           }}
           onDragLeave={() => setIsDraggingOver(false)}
-          className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer ${
+          className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer transition ${
             isDraggingOver
               ? "border-blue-500 bg-blue-50"
               : "hover:border-gray-400 hover:bg-gray-50"
@@ -250,12 +267,20 @@ export default function ToolUploadPage() {
                   {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
                 </p>
               </div>
+
               <button
                 onClick={handleRemoveFile}
                 className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-red-600 border border-red-200 rounded-lg hover:bg-red-50"
               >
                 <Trash2 className="w-4 h-4" />
-                Clear All
+                Remove
+              </button>
+
+              <button
+                onClick={handleReplaceFile}
+                className="flex items-center gap-2 px-3.5 py-2 text-sm font-medium text-blue-600 border border-blue-200 rounded-lg hover:bg-blue-50"
+              >
+                Replace File
               </button>
             </div>
 
@@ -291,7 +316,9 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
+        {fileError && (
+          <p className="mt-3 text-sm text-red-600">{fileError}</p>
+        )}
       </main>
     </div>
   );

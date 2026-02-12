@@ -1,7 +1,6 @@
 @import "tailwindcss";
 
 :root {
-  /* Exact Light Mint Theme from Images */
   --background: #eef6f5; 
   --foreground: #1a202c;
   
@@ -19,49 +18,28 @@
   --ring: #1e1e2e;
 }
 
-/* ✅ DARK MODE — FIXED VISIBILITY */
+/* ✅ DARK MODE — CLEAN VERSION */
 .dark {
   --background: #0f172a;
-
-  /* ⭐ Strong readable text */
   --foreground: #ffffff;
-
-  /* ⭐ Muted but visible text */
-  --muted-foreground: #cbd5e1;
+  --muted-foreground: #94a3b8;
 
   --primary: #60a5fa;
   --primary-foreground: #0f172a;
 
-  /* ⭐ Better card contrast */
-  --card: rgba(15, 23, 42, 0.85);
+  --card: #1e293b;
   --card-foreground: #ffffff;
 
-  --muted: #1e293b;
-
-  --border: #475569;
+  --muted: #0f172a;
+  --border: #334155;
   --input: #1e293b;
   --ring: #60a5fa;
 }
 
-/* ✅ ADD THIS — FORCE TEXT VISIBILITY IN DARK MODE */
-.dark body {
-  color: var(--foreground);
-}
+/* ❌ REMOVED GLOBAL TEXT OVERRIDES */
+/* DO NOT FORCE TEXT COLORS GLOBALLY */
 
-.dark h1,
-.dark h2,
-.dark h3,
-.dark h4,
-.dark h5,
-.dark h6,
-.dark p,
-.dark span,
-.dark div,
-.dark label,
-.dark a {
-  color: inherit;
-}
-
+/* Tailwind Theme Mapping */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -97,5 +75,5 @@ body {
 .glass-card {
   background: var(--card);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.5);
+  border: 1px solid var(--border);
 }
