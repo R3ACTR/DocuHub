@@ -3,16 +3,13 @@
 import {
   ArrowLeft,
   Upload,
-  Combine,
-  Scissors,
-  FileUp,
   Loader2,
   FileText,
-  Minimize2,
   Trash2,
 } from "lucide-react";
 
 import { ToolCard } from "@/components/ToolCard";
+import { PDF_TOOLS } from "@/lib/pdfTools"; // ✅ LOCKED SOURCE
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
@@ -40,7 +37,6 @@ export default function ToolUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
   const [password, setPassword] = useState("");
-
   const [compressionLevel, setCompressionLevel] = useState<
     "low" | "medium" | "high"
   >("medium");
@@ -53,14 +49,14 @@ export default function ToolUploadPage() {
     type: string;
   } | null>(null);
 
-  /* Restore persisted state */
+  /* ---------------- Restore persisted state ---------------- */
   useEffect(() => {
     if (!toolId) return;
     const stored = loadToolState(toolId);
     if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
   }, [toolId]);
 
-  /* Persist state */
+  /* ---------------- Persist state ---------------- */
   useEffect(() => {
     if (!toolId || !selectedFile) return;
 
@@ -73,7 +69,7 @@ export default function ToolUploadPage() {
     });
   }, [toolId, selectedFile]);
 
-  /* Warn before refresh */
+  /* ---------------- Warn before refresh ---------------- */
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -94,13 +90,14 @@ export default function ToolUploadPage() {
       case "pdf-split":
       case "pdf-protect":
       case "pdf-compress":
+      case "pdf-redact":
         return [".pdf"];
       default:
         return [];
     }
   };
 
-  /* Handle file select */
+  /* ---------------- Handle file select ---------------- */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -123,7 +120,7 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
-  /* Remove file */
+  /* ---------------- Remove file ---------------- */
   const handleRemoveFile = () => {
     const confirmed = window.confirm(
       "This will remove your uploaded file. Continue?"
@@ -140,12 +137,12 @@ export default function ToolUploadPage() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  /* Replace file */
+  /* ---------------- Replace file ---------------- */
   const handleReplaceFile = () => {
     fileInputRef.current?.click();
   };
 
-  /* Process file */
+  /* ---------------- Process file ---------------- */
   const handleProcessFile = async () => {
     if (!selectedFile) return;
 
@@ -186,7 +183,7 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
-  /* PDF TOOLS PAGE */
+  /* ================= PDF TOOLS PAGE (LOCKED) ================= */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
@@ -195,18 +192,22 @@ export default function ToolUploadPage() {
           <p className="text-muted-foreground mb-12">Choose a PDF tool</p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            <ToolCard icon={Combine} title="Merge PDF" description="Combine PDFs" href="/dashboard/pdf-merge" />
-            <ToolCard icon={Minimize2} title="Compress PDF" description="Reduce file size" href="/tool/pdf-compress" />
-            <ToolCard icon={Scissors} title="Split PDF" description="Split pages" href="/dashboard/pdf-split" />
-            <ToolCard icon={FileText} title="Protect PDF" description="Add password protection" href="/tool/pdf-protect" />
-            <ToolCard icon={FileUp} title="Document to PDF" description="Convert to PDF" href="/dashboard/document-to-pdf" />
+            {PDF_TOOLS.map((tool) => (
+              <ToolCard
+                key={tool.id}
+                icon={tool.icon}
+                title={tool.title}
+                description={tool.description}
+                href={tool.href}
+              />
+            ))}
           </div>
         </main>
       </div>
     );
   }
 
-  /* UPLOAD PAGE */
+  /* ================= UPLOAD PAGE ================= */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -248,7 +249,6 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {/* Empty-state hint */}
         {!selectedFile && (
           <p className="mt-6 text-sm text-muted-foreground text-center">
             No file selected. Upload a file to continue.
@@ -292,6 +292,23 @@ export default function ToolUploadPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full border rounded-lg px-3 py-2 text-sm"
                 />
+              </div>
+            )}
+
+            {toolId === "pdf-compress" && (
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <p className="font-medium mb-3">Compression Level</p>
+                {(["low", "medium", "high"] as const).map((level) => (
+                  <label key={level} className="block text-sm">
+                    <input
+                      type="radio"
+                      checked={compressionLevel === level}
+                      onChange={() => setCompressionLevel(level)}
+                      className="mr-2"
+                    />
+                    {level}
+                  </label>
+                ))}
               </div>
             )}
 
