@@ -4,31 +4,26 @@ import { ToolCard } from "@/components/ToolCard";
 import RecentFiles from "@/components/RecentFiles";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation"; // ✅ ADDED
+import { usePathname } from "next/navigation";
 
 export default function Dashboard() {
   const [lastTool, setLastTool] = useState<string | null>(null);
   const [hideResume, setHideResume] = useState(false);
 
-  // ✅ NEW — recent tools state (safe add)
   const [recentTools, setRecentTools] = useState<string[]>([]);
-
-  // ✅ NEW — usage count state
   const [toolCounts, setToolCounts] = useState<Record<string, number>>({});
 
-  const pathname = usePathname(); // ✅ ADDED
+  const pathname = usePathname();
 
   useEffect(() => {
     const storedTool = localStorage.getItem("lastUsedTool");
     const dismissedFor = localStorage.getItem("hideResumeFor");
 
-    // ✅ Load recent tools
     const storedRecent = JSON.parse(
       localStorage.getItem("recentTools") || "[]"
     );
     setRecentTools(storedRecent);
 
-    // ✅ Load usage counts
     const storedCounts = JSON.parse(
       localStorage.getItem("toolUsageCounts") || "{}"
     );
@@ -40,7 +35,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // ✅ Sort most used tools
   const mostUsedTools = Object.entries(toolCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
@@ -49,15 +43,22 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col">
       <main className="flex-1 container mx-auto px-6 py-12 md:px-12">
 
+        {/* Resume Banner */}
         {lastTool && !hideResume && (
-          <div className="mb-8 max-w-5xl rounded-xl border bg-[#eef6f5] p-4 flex items-start justify-between gap-4">
+          <div className="
+            mb-8 max-w-5xl rounded-xl border p-4 flex items-start justify-between gap-4
+            bg-white dark:bg-slate-800
+            border-gray-200 dark:border-slate-700
+            shadow-sm
+          ">
             <div>
-              <p className="text-sm text-muted-foreground mb-1">
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-1">
                 Resume your last tool
               </p>
+
               <Link
                 href={`/tool/${lastTool}`}
-                className="text-base font-semibold text-[#1e1e2e] hover:underline"
+                className="text-base font-semibold text-gray-900 dark:text-white hover:underline"
               >
                 → {lastTool.replace("-", " ").toUpperCase()}
               </Link>
@@ -70,18 +71,22 @@ export default function Dashboard() {
                 }
                 setHideResume(true);
               }}
-              className="text-sm text-muted-foreground hover:text-[#1e1e2e]"
-              aria-label="Dismiss resume suggestion"
+              className="text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
             >
               ✕
             </button>
           </div>
         )}
 
-        {/* ✅ NEW — MOST USED TOOLS SECTION */}
+        {/* MOST USED TOOLS */}
         {mostUsedTools.length > 0 && (
-          <div className="mb-10 max-w-5xl">
-            <h2 className="text-xl font-semibold text-[#1e1e2e] mb-4">
+          <div className="
+            mb-10 max-w-5xl p-5 rounded-xl
+            bg-white/80 dark:bg-slate-900/40
+            border border-gray-200 dark:border-slate-700
+            shadow-sm
+          ">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
               Most Used Tools
             </h2>
 
@@ -90,12 +95,18 @@ export default function Dashboard() {
                 <Link
                   key={tool}
                   href={`/tool/${tool}`}
-                  className="rounded-lg border p-4 bg-white hover:bg-[#f6fbfa] transition flex justify-between items-center"
+                  className="
+                  rounded-lg border p-4 transition flex justify-between items-center
+                  bg-white dark:bg-slate-800
+                  border-gray-200 dark:border-slate-700
+                  hover:bg-gray-50 dark:hover:bg-slate-700
+                "
                 >
-                  <span className="font-medium">
+                  <span className="font-medium text-gray-900 dark:text-white">
                     {tool.replace("-", " ").toUpperCase()}
                   </span>
-                  <span className="text-sm text-muted-foreground">
+
+                  <span className="text-sm text-gray-500 dark:text-gray-400">
                     {count} uses
                   </span>
                 </Link>
@@ -104,18 +115,24 @@ export default function Dashboard() {
           </div>
         )}
 
-        <div className="mb-12">
-          <h1 className="text-3xl font-semibold text-[#1e1e2e] tracking-tight mb-2">
+        {/* Choose Tool Header */}
+        <div className="
+          mb-12 p-5 rounded-xl
+          bg-white/80 dark:bg-slate-900/40
+          border border-gray-200 dark:border-slate-700
+          shadow-sm
+        ">
+          <h1 className="text-3xl font-semibold tracking-tight mb-2 text-gray-900 dark:text-white">
             Choose a tool
           </h1>
-          <p className="text-muted-foreground text-lg">
+
+          <p className="text-gray-600 dark:text-gray-400 text-lg">
             Select what you want to do with your file
           </p>
         </div>
 
         {/* Tools Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 max-w-5xl">
-
           <ToolCard
             icon={FileText}
             title="PDF Tools"
@@ -151,7 +168,6 @@ export default function Dashboard() {
             disabled={false}
             active={pathname === "/tool/data-tools"}
           />
-
         </div>
 
         <RecentFiles />
