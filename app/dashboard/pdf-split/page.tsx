@@ -38,7 +38,7 @@ export default function PdfSplitPage() {
 
     if (droppedFiles.length === 0) return;
 
-    setFiles(droppedFiles.slice(0, 1)); // only one file allowed
+    setFiles(droppedFiles.slice(0, 1));
   };
 
   const handleSplit = async () => {
@@ -60,7 +60,6 @@ export default function PdfSplitPage() {
       const pdf = await PDFDocument.load(bytes);
 
       const newPdf = await PDFDocument.create();
-
       const pagesToExtract: number[] = [];
 
       if (pageRange.includes("-")) {
@@ -88,7 +87,6 @@ export default function PdfSplitPage() {
       }
 
       const copiedPages = await newPdf.copyPages(pdf, pagesToExtract);
-
       copiedPages.forEach((page) => newPdf.addPage(page));
 
       const newBytes = await newPdf.save();
@@ -115,126 +113,83 @@ export default function PdfSplitPage() {
   };
 
   return (
-    <div
-      style={{
-        maxWidth: "600px",
-        margin: "40px auto",
-        padding: "24px",
-        border: isDragging ? "2px dashed #4f46e5" : "2px dashed #d1d5db",
-        backgroundColor: isDragging ? "#eef2ff" : "#fafafa",
-        borderRadius: "12px",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-      }}
-      onDragOver={handleDragOver}
-      onDragLeave={handleDragLeave}
-      onDrop={handleDrop}
-    >
-      <h1
-        style={{
-          fontSize: "24px",
-          fontWeight: "600",
-          marginBottom: "6px",
-        }}
+    <div className="max-w-2xl mx-auto mt-12 px-6">
+
+      {/* Upload Card */}
+      <div
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-xl p-10 text-center transition ${
+          isDragging
+            ? "border-indigo-500 bg-indigo-50"
+            : "border-gray-300 bg-gray-50 hover:border-gray-400"
+        }`}
       >
-        Split PDF File
-      </h1>
+        <h1 className="text-2xl font-semibold mb-2">Split PDF File</h1>
+        <p className="text-gray-500 text-sm mb-4">
+          Upload a PDF and choose pages to split
+        </p>
 
-      <p
-        style={{
-          color: "#6b7280",
-          fontSize: "14px",
-          marginBottom: "16px",
-        }}
-      >
-        Select a PDF file and specify pages to split.
-      </p>
+        <input
+          type="file"
+          accept="application/pdf"
+          onChange={(e) => {
+            if (!e.target.files) return;
+            setFiles([e.target.files[0]]);
+          }}
+          className="mx-auto block"
+        />
 
-      <input
-        type="file"
-        accept="application/pdf"
-        style={{
-          marginTop: "10px",
-          marginBottom: "10px",
-        }}
-        onChange={(e) => {
-          if (!e.target.files) return;
-          setFiles([e.target.files[0]]);
-        }}
-      />
+        <p className="text-sm text-gray-500 mt-2">
+          {files.length} file selected
+        </p>
+      </div>
 
-      <p>{files.length} file selected</p>
-
-      <input
-        type="text"
-        placeholder="Enter pages (example: 1-3 or 2)"
-        value={pageRange}
-        onChange={(e) => setPageRange(e.target.value)}
-        style={{
-          width: "100%",
-          marginTop: "10px",
-          padding: "8px",
-          borderRadius: "6px",
-          border: "1px solid #d1d5db",
-        }}
-      />
-
+      {/* File Preview Card */}
       {files.map((file, index) => (
         <div
           key={index}
-          style={{
-            padding: "12px",
-            marginTop: "10px",
-            border: "1px solid #e5e7eb",
-            borderRadius: "8px",
-            backgroundColor: "white",
-            display: "flex",
-            justifyContent: "space-between",
-          }}
+          className="mt-4 flex justify-between items-center bg-white border rounded-lg p-4 shadow-sm"
         >
           <div>
-            📄 {file.name}
-            <div style={{ fontSize: "12px", color: "#666" }}>
+            <p className="font-medium">📄 {file.name}</p>
+            <p className="text-xs text-gray-500">
               {formatFileSize(file.size)}
-            </div>
+            </p>
           </div>
 
           <button
             onClick={() => removeFile(index)}
-            style={{
-              backgroundColor: "#ef4444",
-              color: "white",
-              border: "none",
-              borderRadius: "6px",
-              padding: "6px 10px",
-              cursor: "pointer",
-            }}
+            className="px-3 py-1.5 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
           >
             Remove
           </button>
         </div>
       ))}
 
-      <div style={{ textAlign: "center" }}>
-        <button
-          onClick={handleSplit}
-          disabled={loading || files.length < 1}
-          style={{
-            marginTop: "20px",
-            backgroundColor:
-              loading || files.length < 1 ? "#9ca3af" : "#4f46e5",
-            color: "white",
-            border: "none",
-            borderRadius: "8px",
-            padding: "10px 18px",
-            cursor:
-              loading || files.length < 1 ? "not-allowed" : "pointer",
-            fontWeight: "500",
-          }}
-        >
-          {loading ? "Splitting PDF..." : "Split PDF"}
-        </button>
-      </div>
+      {/* Page Input */}
+      <input
+        type="text"
+        placeholder="Enter pages (example: 1-3 or 2)"
+        value={pageRange}
+        onChange={(e) => setPageRange(e.target.value)}
+        className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+      />
+
+      {/* Split Button */}
+      <button
+        onClick={handleSplit}
+        disabled={loading || files.length < 1}
+        className={`w-full mt-6 py-3 rounded-lg font-medium transition ${
+          loading || files.length < 1
+            ? "bg-gray-400 cursor-not-allowed"
+            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+        }`}
+      >
+        {loading ? "Splitting PDF..." : "Split PDF"}
+      </button>
+
     </div>
   );
 }
-

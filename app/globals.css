@@ -3,20 +3,63 @@
 :root {
   /* Exact Light Mint Theme from Images */
   --background: #eef6f5; 
-  --foreground: #1a202c; /* Dark text for contrast */
+  --foreground: #1a202c;
   
-  --primary: #1e1e2e; /* Dark Navy for buttons/primary actions */
+  --primary: #1e1e2e;
   --primary-foreground: #ffffff;
   
-  --card: rgba(255, 255, 255, 0.6); /* Glassy/Light Card */
+  --card: rgba(255, 255, 255, 0.6);
   --card-foreground: #1a202c;
   
-  --muted: #ddebe9; /* Slightly darker mint for secondary elements */
+  --muted: #ddebe9;
   --muted-foreground: #4a5568;
   
   --border: #ccdcdb;
   --input: #ffffff;
   --ring: #1e1e2e;
+}
+
+/* ✅ DARK MODE — FIXED VISIBILITY */
+.dark {
+  --background: #0f172a;
+
+  /* ⭐ Strong readable text */
+  --foreground: #ffffff;
+
+  /* ⭐ Muted but visible text */
+  --muted-foreground: #cbd5e1;
+
+  --primary: #60a5fa;
+  --primary-foreground: #0f172a;
+
+  /* ⭐ Better card contrast */
+  --card: rgba(15, 23, 42, 0.85);
+  --card-foreground: #ffffff;
+
+  --muted: #1e293b;
+
+  --border: #475569;
+  --input: #1e293b;
+  --ring: #60a5fa;
+}
+
+/* ✅ ADD THIS — FORCE TEXT VISIBILITY IN DARK MODE */
+.dark body {
+  color: var(--foreground);
+}
+
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark p,
+.dark span,
+.dark div,
+.dark label,
+.dark a {
+  color: inherit;
 }
 
 @theme inline {
@@ -44,12 +87,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Utility for the specific banner style */
+/* Banner Utility */
 .banner-strip {
-  background-color: rgba(0, 0, 0, 0.05); /* Subtle dark overlay strip */
+  background-color: rgba(0, 0, 0, 0.05);
   border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+/* Glass Card */
 .glass-card {
   background: var(--card);
   backdrop-filter: blur(12px);
