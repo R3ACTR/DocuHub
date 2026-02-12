@@ -2,6 +2,7 @@
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
 import RecentFiles from "@/components/RecentFiles";
+import RecentlyDeletedFiles from "@/components/RecentlyDeletedFiles"; // ✅ ADDED
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -171,6 +172,9 @@ export default function Dashboard() {
         </div>
 
         <RecentFiles />
+
+        {/* ✅ ADDED — Recently Deleted Section */}
+        <RecentlyDeletedFiles />
 
       </main>
     </div>
