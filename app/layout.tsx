@@ -4,6 +4,7 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import Navbar from "@/components/Navbar";
+import { Toaster } from "sonner"; // ✅ ADDED (Sonner Import)
 
 const geistSans = localFont({
   variable: "--font-geist-sans",
@@ -36,6 +37,9 @@ export default function RootLayout({
         <Navbar />
         {children}
         <Footer />
+
+        {/* ✅ ADDED — Global Toast Provider */}
+        <Toaster position="top-right" richColors />
       </body>
     </html>
   );
