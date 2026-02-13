@@ -32,6 +32,17 @@ export default function PdfMergePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
+  /* ✅ REPLACE FILE FUNCTION */
+  const replaceFile = (idToReplace: string, newFile: File) => {
+    if (newFile.type !== 'application/pdf') return;
+
+    setFilesWithIds((prev) =>
+      prev.map((item) =>
+        item.id === idToReplace ? { ...item, file: newFile } : item
+      )
+    );
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
@@ -156,11 +167,28 @@ export default function PdfMergePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
+
+      {/* ✅ HIDDEN REPLACE INPUT */}
+      <input
+        type="file"
+        accept="application/pdf"
+        id="replace-file-input"
+        className="hidden"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          const id = e.currentTarget.getAttribute('data-replace-id');
+          if (file && id) replaceFile(id, file);
+          e.currentTarget.value = '';
+        }}
+      />
+
       <div className="text-center mb-10">
         <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-4">
           <Combine className="w-8 h-8" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Merge PDF Files</h1>
+        <h1 className="text-3xl font-bold text-gray-900 tracking-tight">
+          Merge PDF Files
+        </h1>
         <p className="mt-2 text-lg text-gray-600">
           Combine multiple PDF documents into a single file. Reorder them as needed.
         </p>
@@ -196,8 +224,8 @@ export default function PdfMergePage() {
           multiple
           onChange={handleFileChange}
           className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-          id="file-upload"
         />
+
         <div className="flex flex-col items-center">
           <div className="p-4 bg-gray-50 rounded-full mb-4">
             <FileUp className="w-10 h-10 text-gray-400" />
@@ -205,33 +233,19 @@ export default function PdfMergePage() {
           <h3 className="text-lg font-semibold text-gray-900">
             {isDraggingOver ? 'Drop files here' : 'Select PDF files to merge'}
           </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Drag and drop files here, or click to browse
-          </p>
-          <div className="mt-6">
-            <label
-              htmlFor="file-upload"
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 cursor-pointer"
-            >
-              Choose Files
-            </label>
-          </div>
         </div>
       </div>
 
-      {/* ✅ RESTORED FILE LIST + MERGE BUTTON */}
       {filesWithIds.length > 0 && (
         <div className="mt-12 space-y-6">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-bold text-gray-900">
-                {filesWithIds.length} {filesWithIds.length === 1 ? 'file' : 'files'} selected
-              </h2>
-            </div>
+            <h2 className="text-xl font-bold text-gray-900">
+              {filesWithIds.length} files selected
+            </h2>
+
             <button
               onClick={clearAll}
-              className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg"
             >
               <Trash2 className="w-4 h-4" />
               Clear All
@@ -250,23 +264,41 @@ export default function PdfMergePage() {
             >
               <div className="space-y-3">
                 {filesWithIds.map((item, index) => (
-                  <SortablePdfItem
-                    key={item.id}
-                    id={item.id}
-                    file={item.file}
-                    index={index}
-                    onRemove={() => removeFile(item.id)}
-                  />
+                  <div key={item.id} className="relative">
+                    <SortablePdfItem
+                      id={item.id}
+                      file={item.file}
+                      index={index}
+                      onRemove={() => removeFile(item.id)}
+                    />
+
+                    {/* ✅ REPLACE BUTTON */}
+                    <button
+                      onClick={() => {
+                        const input = document.getElementById(
+                          'replace-file-input'
+                        ) as HTMLInputElement;
+
+                        if (input) {
+                          input.setAttribute('data-replace-id', item.id);
+                          input.click();
+                        }
+                      }}
+                      className="absolute right-20 top-4 text-sm px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition"
+                    >
+                      Replace
+                    </button>
+                  </div>
                 ))}
               </div>
             </SortableContext>
           </DndContext>
 
-          <div className="pt-6 border-t border-gray-100 flex justify-center">
+          <div className="pt-6 flex justify-center">
             <button
               onClick={handleMerge}
               disabled={loading || filesWithIds.length < 2}
-              className="group relative flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl shadow-lg shadow-indigo-200 hover:bg-indigo-700 hover:shadow-xl transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none min-w-[200px] justify-center overflow-hidden"
+              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl"
             >
               {loading ? (
                 <>
