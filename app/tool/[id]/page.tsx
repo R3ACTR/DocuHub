@@ -41,6 +41,9 @@ export default function ToolUploadPage() {
   const [watermarkText, setWatermarkText] = useState("");
   const [rotationAngle, setRotationAngle] = useState(45);
 
+  /* ✅ NEW — Watermark Opacity State */
+  const [opacity, setOpacity] = useState(40);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
@@ -163,6 +166,7 @@ export default function ToolUploadPage() {
         /* ✅ Save watermark text for later processing */
         if (toolId === "pdf-watermark") {
           localStorage.setItem("watermarkText", watermarkText);
+          localStorage.setItem("watermarkOpacity", opacity.toString()); // ✅ NEW
         }
 
         clearToolState(toolId);
@@ -304,6 +308,29 @@ export default function ToolUploadPage() {
               <option value={45}>45°</option>
               <option value={90}>90°</option>
             </select>
+          </div>
+        )}
+
+        {/* ✅ NEW — Opacity Slider */}
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Watermark Opacity ({opacity}%)
+            </label>
+
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={opacity}
+              onChange={(e) => setOpacity(Number(e.target.value))}
+              className="w-full"
+            />
+
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0%</span>
+              <span>100%</span>
+            </div>
           </div>
         )}
 
