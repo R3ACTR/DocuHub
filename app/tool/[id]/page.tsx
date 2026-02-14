@@ -37,11 +37,11 @@ export default function ToolUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
 
-  /* ✅ NEW — Watermark States */
+  /* ✅ Watermark States */
   const [watermarkText, setWatermarkText] = useState("");
   const [rotationAngle, setRotationAngle] = useState(45);
 
-  /* ✅ NEW — Watermark Opacity State */
+  /* ✅ Opacity State */
   const [opacity, setOpacity] = useState(40);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -164,7 +164,7 @@ export default function ToolUploadPage() {
         if (toolId === "pdf-watermark") {
           localStorage.setItem("watermarkRotation", rotationAngle.toString());
           localStorage.setItem("watermarkText", watermarkText);
-          localStorage.setItem("watermarkOpacity", opacity.toString()); // ✅ NEW
+          localStorage.setItem("watermarkOpacity", opacity.toString());
         }
 
         clearToolState(toolId);
@@ -264,11 +264,17 @@ export default function ToolUploadPage() {
               </p>
             </div>
 
-            <button onClick={handleReplaceFile} className="text-sm text-blue-600 hover:underline">
+            <button
+              onClick={handleReplaceFile}
+              className="text-sm text-blue-600 hover:underline"
+            >
               Replace
             </button>
 
-            <button onClick={handleRemoveFile} className="text-sm text-red-600 hover:underline">
+            <button
+              onClick={handleRemoveFile}
+              className="text-sm text-red-600 hover:underline"
+            >
               Remove
             </button>
           </div>
@@ -308,7 +314,7 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {/* ✅ NEW — Opacity Slider */}
+        {/* Opacity */}
         {toolId === "pdf-watermark" && (
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -334,12 +340,11 @@ export default function ToolUploadPage() {
         <button
           onClick={handleProcessFile}
           disabled={!selectedFile || isProcessing}
-          className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition
-            ${
-              selectedFile && !isProcessing
-                ? "bg-black text-white hover:bg-gray-800"
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
+          className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${
+            selectedFile && !isProcessing
+              ? "bg-black text-white hover:bg-gray-800"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
         >
           {isProcessing ? (
             <span className="flex items-center justify-center gap-2">
