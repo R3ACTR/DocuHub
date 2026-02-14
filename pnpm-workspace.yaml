@@ -1,5 +1,7 @@
 packages:
   - .
+
 ignoredBuiltDependencies:
   - sharp
+  - tesseract.js
   - unrs-resolver
