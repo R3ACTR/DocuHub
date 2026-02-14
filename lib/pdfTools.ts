@@ -92,7 +92,7 @@ export const PDF_TOOLS = Object.freeze([
     icon: FileText,
   },
 
-  // ✅ NEW — Page Numbers Tool (Your New Issue Feature)
+  // ✅ NEW — Page Numbers Tool
   {
     id: "pdf-page-numbers",
     title: "Add Page Numbers",

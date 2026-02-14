@@ -47,6 +47,9 @@ export default function ToolUploadPage() {
   const [rotationAngle, setRotationAngle] = useState(45);
   const [opacity, setOpacity] = useState(40);
 
+  /* ✅ Page Number State (NEW) */
+  const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
@@ -104,6 +107,7 @@ export default function ToolUploadPage() {
       case "pdf-protect":
       case "pdf-compress":
       case "pdf-watermark":
+      case "pdf-page-numbers":
         return [".pdf"];
 
       default:
@@ -182,6 +186,11 @@ export default function ToolUploadPage() {
           localStorage.setItem("watermarkRotation", rotationAngle.toString());
           localStorage.setItem("watermarkText", watermarkText);
           localStorage.setItem("watermarkOpacity", opacity.toString());
+        }
+
+        /* ✅ NEW — Page Number Save */
+        if (toolId === "pdf-page-numbers") {
+          localStorage.setItem("pageNumberFormat", pageNumberFormat);
         }
 
         clearToolState(toolId);
@@ -319,60 +328,22 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {/* Watermark Text */}
-        {toolId === "pdf-watermark" && (
+        {/* Page Number Format (NEW UI) */}
+        {toolId === "pdf-page-numbers" && (
           <div className="mt-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Watermark Text
+              Page Number Format
             </label>
-            <input
-              type="text"
-              value={watermarkText}
-              onChange={(e) => setWatermarkText(e.target.value)}
-              placeholder="Enter watermark text (e.g., Confidential)"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-          </div>
-        )}
 
-        {/* Rotation */}
-        {toolId === "pdf-watermark" && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Watermark Rotation
-            </label>
             <select
-              value={rotationAngle}
-              onChange={(e) => setRotationAngle(Number(e.target.value))}
+              value={pageNumberFormat}
+              onChange={(e) => setPageNumberFormat(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
             >
-              <option value={0}>0°</option>
-              <option value={45}>45°</option>
-              <option value={90}>90°</option>
+              <option value="numeric">1, 2, 3</option>
+              <option value="roman">i, ii, iii</option>
+              <option value="alphabet">A, B, C</option>
             </select>
-          </div>
-        )}
-
-        {/* Opacity */}
-        {toolId === "pdf-watermark" && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Watermark Opacity ({opacity}%)
-            </label>
-
-            <input
-              type="range"
-              min={0}
-              max={100}
-              value={opacity}
-              onChange={(e) => setOpacity(Number(e.target.value))}
-              className="w-full"
-            />
-
-            <div className="flex justify-between text-xs text-gray-500 mt-1">
-              <span>0%</span>
-              <span>100%</span>
-            </div>
           </div>
         )}
 
