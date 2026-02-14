@@ -37,6 +37,11 @@ export default function ToolUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
 
+  /* ✅ Watermark States */
+  const [watermarkText, setWatermarkText] = useState("");
+  const [rotationAngle, setRotationAngle] = useState(45);
+
+  /* ✅ Opacity State */
   /* watermark options */
   const [watermarkText, setWatermarkText] = useState("");
   const [rotationAngle, setRotationAngle] = useState(45);
@@ -172,7 +177,16 @@ export default function ToolUploadPage() {
     try {
       const ok = await storeFile(selectedFile);
 
-      if (!ok) {
+      if (ok) {
+        if (toolId === "pdf-watermark") {
+          localStorage.setItem("watermarkRotation", rotationAngle.toString());
+          localStorage.setItem("watermarkText", watermarkText);
+          localStorage.setItem("watermarkOpacity", opacity.toString());
+        }
+
+        clearToolState(toolId);
+        router.push(`/tool/${toolId}/processing`);
+      } else {
         setFileError("Failed to process file.");
         return;
       }
@@ -305,7 +319,63 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {/* Process button */}
+        {/* Watermark Text */}
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Watermark Text
+            </label>
+            <input
+              type="text"
+              value={watermarkText}
+              onChange={(e) => setWatermarkText(e.target.value)}
+              placeholder="Enter watermark text (e.g., Confidential)"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        )}
+
+        {/* Rotation */}
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Watermark Rotation
+            </label>
+            <select
+              value={rotationAngle}
+              onChange={(e) => setRotationAngle(Number(e.target.value))}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value={0}>0°</option>
+              <option value={45}>45°</option>
+              <option value={90}>90°</option>
+            </select>
+          </div>
+        )}
+
+        {/* Opacity */}
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Watermark Opacity ({opacity}%)
+            </label>
+
+            <input
+              type="range"
+              min={0}
+              max={100}
+              value={opacity}
+              onChange={(e) => setOpacity(Number(e.target.value))}
+              className="w-full"
+            />
+
+            <div className="flex justify-between text-xs text-gray-500 mt-1">
+              <span>0%</span>
+              <span>100%</span>
+            </div>
+          </div>
+        )}
+
         <button
           onClick={handleProcessFile}
           disabled={!selectedFile || isProcessing}

@@ -91,4 +91,13 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-watermark",
     icon: FileText,
   },
+
+  // ✅ NEW — Page Numbers Tool (Your New Issue Feature)
+  {
+    id: "pdf-page-numbers",
+    title: "Add Page Numbers",
+    description: "Insert page numbers into PDF",
+    href: "/tool/pdf-page-numbers",
+    icon: FileText,
+  },
 ]);
