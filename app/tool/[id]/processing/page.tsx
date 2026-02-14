@@ -19,7 +19,7 @@ export default function ProcessingPage() {
   const [copied, setCopied] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
 
-  /* RUN TOOL */
+  /* ================= RUN TOOL ================= */
   useEffect(() => {
     const run = async () => {
       const stored = getStoredFile();
@@ -49,12 +49,13 @@ export default function ProcessingPage() {
     run();
   }, [toolId, router]);
 
-  /* OCR */
+  /* ================= OCR ================= */
   const runOCR = async (base64: string) => {
     const res = await Tesseract.recognize(base64, "eng", {
-      logger: m => {
-        if (m.status === "recognizing text")
+      logger: (m) => {
+        if (m.status === "recognizing text") {
           setProgress(Math.round(m.progress * 100));
+        }
       },
     });
 
@@ -62,10 +63,9 @@ export default function ProcessingPage() {
     setStatus("done");
   };
 
-  /* PROTECT PDF */
+  /* ================= PDF PROTECT ================= */
   const protectPDF = async (base64: string) => {
     const bytes = base64ToBytes(base64);
-
     const pdf = await PDFDocument.load(bytes);
     const saved = await pdf.save();
 
@@ -73,7 +73,7 @@ export default function ProcessingPage() {
     setStatus("done");
   };
 
-  /* IMAGE → PDF */
+  /* ================= IMAGE → PDF ================= */
   const imageToPdf = async (base64: string, type: "jpg" | "png") => {
     const bytes = base64ToBytes(base64);
 
@@ -93,19 +93,17 @@ export default function ProcessingPage() {
     });
 
     const saved = await pdf.save();
-
     setDownloadUrl(makeBlobUrl(saved));
     setStatus("done");
   };
 
-  /* HELPERS */
+  /* ================= HELPERS ================= */
 
   const base64ToBytes = (base64: string) => {
     const clean = base64.includes(",") ? base64.split(",")[1] : base64;
-    return Uint8Array.from(atob(clean), c => c.charCodeAt(0));
+    return Uint8Array.from(atob(clean), (c) => c.charCodeAt(0));
   };
 
-  /* ✅ FIXED LINE HERE */
   const makeBlobUrl = (bytes: Uint8Array) => {
     const blob = new Blob([new Uint8Array(bytes)], {
       type: "application/pdf",
@@ -128,12 +126,13 @@ export default function ProcessingPage() {
     a.click();
   };
 
-  /* UI */
+  /* ================= UI STATES ================= */
 
   if (status === "processing")
     return (
       <div className="min-h-screen flex items-center justify-center">
         <Loader2 className="h-10 w-10 animate-spin" />
+        <p className="ml-3">{progress}%</p>
       </div>
     );
 
@@ -147,11 +146,19 @@ export default function ProcessingPage() {
       </div>
     );
 
+  /* ================= SUCCESS UI ================= */
+
   return (
     <div className="min-h-screen flex items-center justify-center text-center">
       <div>
         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-        <h2 className="text-xl font-semibold mb-4">Completed Successfully</h2>
+        <h2 className="text-xl font-semibold mb-4">
+          {toolId === "jpeg-to-pdf"
+            ? "JPEG Converted to PDF!"
+            : toolId === "png-to-pdf"
+            ? "PNG Converted to PDF!"
+            : "Completed Successfully"}
+        </h2>
 
         {downloadUrl && (
           <button
