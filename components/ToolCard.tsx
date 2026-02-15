@@ -20,7 +20,10 @@ enabled:hover:border-white/60
         >
             <div className="flex items-center gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-transparent sm:bg-transparent text-[#4a5568]">
-                    <Icon className="h-6 w-6 stroke-1" />
+<Icon
+  className="h-6 w-6 stroke-1"
+  aria-hidden="true"
+/>
                 </div>
                 <div>
                     <h3 className="text-lg font-medium text-[#1e1e2e]">
