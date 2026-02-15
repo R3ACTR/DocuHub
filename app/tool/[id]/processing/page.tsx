@@ -26,6 +26,9 @@ export default function ProcessingPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [originalSize, setOriginalSize] = useState<number | null>(null);
+const [compressedSize, setCompressedSize] = useState<number | null>(null);
+
 
   /* ================= RUN TOOL ================= */
   useEffect(() => {
@@ -49,8 +52,12 @@ export default function ProcessingPage() {
         else if (toolId === "png-to-pdf")
           await imageToPdf(stored[0].data, "png");
 
-        else if (toolId === "pdf-compress")
-          await startCompressFlow(stored);
+       else if (toolId === "pdf-compress") {
+  const originalBytes = base64ToBytes(stored[0].data);
+  setOriginalSize(originalBytes.length);
+  await startCompressFlow(stored);
+}
+
 
         else setStatus("done");
       } catch (e) {
@@ -81,6 +88,9 @@ export default function ProcessingPage() {
 
   /* ================= COMPRESS ================= */
   const startCompressFlow = async (files: StoredFile[]) => {
+    const [originalSize, setOriginalSize] = useState<number | null>(null);
+const [compressedSize, setCompressedSize] = useState<number | null>(null);
+
     setProgress(20);
 
     const targetSize = localStorage.getItem("targetSize") || "1MB";
@@ -108,8 +118,9 @@ export default function ProcessingPage() {
       atob(data.results[0].file),
       (c) => c.charCodeAt(0)
     );
+    setCompressedSize(bytes.length);
 
-    setDownloadUrl(makeBlobUrl(bytes));
+   setDownloadUrl(makeBlobUrl(bytes));
     setProgress(100);
     setStatus("done");
   };
@@ -219,6 +230,27 @@ export default function ProcessingPage() {
             Download PDF
           </button>
         )}
+
+        {toolId === "pdf-compress" &&
+  originalSize &&
+  compressedSize && (
+    <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
+      <p>
+        Original Size: {(originalSize / (1024 * 1024)).toFixed(2)} MB
+      </p>
+      <p>
+        Compressed Size: {(compressedSize / (1024 * 1024)).toFixed(2)} MB
+      </p>
+      <p className="font-semibold text-green-600">
+        Reduced by {(
+          ((originalSize - compressedSize) / originalSize) *
+          100
+        ).toFixed(1)}
+        %
+      </p>
+    </div>
+  )}
+
 
         {toolId === "ocr" && (
           <button
