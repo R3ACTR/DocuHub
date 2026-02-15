@@ -13,8 +13,8 @@ import { PDF_TOOLS } from "@/lib/pdfTools";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { clearStoredFiles, storeFile } from "@/lib/fileStore";
 
-import { storeFile } from "@/lib/fileStore";
 import {
   saveToolState,
   loadToolState,
@@ -31,7 +31,7 @@ export default function ToolUploadPage() {
     ? params.id[0]
     : (params.id as string);
 
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -44,8 +44,6 @@ export default function ToolUploadPage() {
 
   /* Page Numbers */
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
-
-  /* ✅ NEW FONT SIZE STATE */
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -56,24 +54,29 @@ export default function ToolUploadPage() {
     type: string;
   } | null>(null);
 
+  /* Load saved state */
   useEffect(() => {
     if (!toolId) return;
     const stored = loadToolState(toolId);
     if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
   }, [toolId]);
 
+  /* Save state */
   useEffect(() => {
-    if (!toolId || !selectedFile) return;
+    if (!toolId || !selectedFiles.length) return;
+
+    const file = selectedFiles[0];
 
     saveToolState(toolId, {
       fileMeta: {
-        name: selectedFile.name,
-        size: selectedFile.size,
-        type: selectedFile.type,
+        name: file.name,
+        size: file.size,
+        type: file.type,
       },
     });
-  }, [toolId, selectedFile]);
+  }, [toolId, selectedFiles]);
 
+  /* Leave warning */
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -85,6 +88,7 @@ export default function ToolUploadPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedWork]);
 
+  /* Supported types */
   const getSupportedTypes = () => {
     switch (toolId) {
       case "ocr":
@@ -109,6 +113,7 @@ export default function ToolUploadPage() {
     }
   };
 
+  /* File icon */
   const getFileIcon = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
 
@@ -121,75 +126,82 @@ export default function ToolUploadPage() {
     return <FileText className="w-6 h-6 text-gray-400" />;
   };
 
+  /* File select */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    clearStoredFiles();
+
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
     const allowed = getSupportedTypes();
-    const ext = "." + file.name.split(".").pop()?.toLowerCase();
+    const validFiles: File[] = [];
 
-    if (allowed.length && !allowed.includes(ext)) {
-      setFileError(`Unsupported file type. Allowed: ${allowed.join(", ")}`);
-      return;
-    }
+    for (const file of files) {
+      const ext = "." + file.name.split(".").pop()?.toLowerCase();
 
-    if (file.size > MAX_FILE_SIZE) {
-      setFileError("File too large. Max size is 10MB.");
-      return;
+      if (allowed.length && !allowed.includes(ext)) {
+        setFileError(`Unsupported file type: ${file.name}`);
+        return;
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        setFileError(`File too large: ${file.name}`);
+        return;
+      }
+
+      validFiles.push(file);
     }
 
     setFileError(null);
-    setSelectedFile(file);
+    setSelectedFiles(validFiles);
     setHasUnsavedWork(true);
   };
 
-  const handleRemoveFile = () => {
-    const confirmed = window.confirm(
-      "This will remove your uploaded file. Continue?"
-    );
-    if (!confirmed) return;
-
-    setSelectedFile(null);
-    setPersistedFileMeta(null);
-    setFileError(null);
-    clearToolState(toolId);
-    setHasUnsavedWork(false);
-
-    if (fileInputRef.current) fileInputRef.current.value = "";
+  /* Remove file */
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
+  /* Replace */
   const handleReplaceFile = () => {
     fileInputRef.current?.click();
   };
 
+  /* Process */
   const handleProcessFile = async () => {
-    if (!selectedFile) return;
+    if (!selectedFiles.length) return;
 
     setIsProcessing(true);
 
     try {
-      const ok = await storeFile(selectedFile);
+      let ok = true;
 
-      if (ok) {
-        if (toolId === "pdf-watermark") {
-          localStorage.setItem("watermarkRotation", rotationAngle.toString());
-          localStorage.setItem("watermarkText", watermarkText);
-          localStorage.setItem("watermarkOpacity", opacity.toString());
+      for (const file of selectedFiles) {
+        const res = await storeFile(file);
+        if (!res) {
+          ok = false;
+          break;
         }
-
-        if (toolId === "pdf-page-numbers") {
-          localStorage.setItem("pageNumberFormat", pageNumberFormat);
-          localStorage.setItem(
-            "pageNumberFontSize",
-            pageNumberFontSize.toString()
-          );
-        }
-
-        clearToolState(toolId);
-        router.push(`/tool/${toolId}/processing`);
-      } else {
-        setFileError("Failed to process file.");
       }
+
+      if (!ok) {
+        setFileError("Failed to process file.");
+        return;
+      }
+
+      if (toolId === "pdf-watermark") {
+        localStorage.setItem("watermarkRotation", rotationAngle.toString());
+        localStorage.setItem("watermarkText", watermarkText);
+        localStorage.setItem("watermarkOpacity", opacity.toString());
+      }
+
+      if (toolId === "pdf-page-numbers") {
+        localStorage.setItem("pageNumberFormat", pageNumberFormat);
+        localStorage.setItem("pageNumberFontSize", pageNumberFontSize.toString());
+      }
+
+      clearToolState(toolId);
+      router.push(`/tool/${toolId}/processing`);
     } catch {
       setFileError("Unexpected error occurred.");
     } finally {
@@ -197,6 +209,7 @@ export default function ToolUploadPage() {
     }
   };
 
+  /* Back */
   const handleBackNavigation = () => {
     if (hasUnsavedWork) {
       const confirmLeave = window.confirm(
@@ -207,6 +220,7 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
+  /* PDF tools page */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
@@ -215,14 +229,8 @@ export default function ToolUploadPage() {
           <p className="text-muted-foreground mb-12">Choose a PDF tool</p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            {PDF_TOOLS.map((tool) => (
-              <ToolCard
-                key={tool.id}
-                icon={tool.icon}
-                title={tool.title}
-                description={tool.description}
-                href={tool.href}
-              />
+            {PDF_TOOLS.map(tool => (
+              <ToolCard key={tool.id} {...tool} />
             ))}
           </div>
         </main>
@@ -230,6 +238,7 @@ export default function ToolUploadPage() {
     );
   }
 
+  /* UI */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -246,7 +255,7 @@ export default function ToolUploadPage() {
 
         <motion.div
           onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => {
+          onDragOver={e => {
             e.preventDefault();
             setIsDraggingOver(true);
           }}
@@ -260,8 +269,8 @@ export default function ToolUploadPage() {
           <Upload className="mx-auto mb-4" />
 
           <p>
-            {selectedFile
-              ? selectedFile.name
+            {selectedFiles.length
+              ? `${selectedFiles.length} file(s) selected`
               : persistedFileMeta
               ? `Previously selected: ${persistedFileMeta.name}`
               : "Drag & drop or click to browse"}
@@ -270,61 +279,79 @@ export default function ToolUploadPage() {
           <input
             ref={fileInputRef}
             type="file"
+            multiple
             className="hidden"
             accept={getSupportedTypes().join(",")}
             onChange={handleFile}
           />
         </motion.div>
 
-        {selectedFile && (
-          <div className="mt-6 flex items-center gap-3 p-4 border rounded-xl bg-white shadow-sm">
-            {getFileIcon(selectedFile)}
+        {/* File list */}
+        {selectedFiles.length > 0 && (
+          <div className="mt-6 space-y-3">
+            {selectedFiles.map((file, index) => (
+              <div
+                key={index}
+                className="flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm"
+              >
+                {getFileIcon(file)}
 
-            <div className="flex-1">
-              <p className="font-medium">{selectedFile.name}</p>
-              <p className="text-sm text-gray-500">
-                {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
-              </p>
-            </div>
+                <div className="flex-1">
+                  <p className="font-medium">{file.name}</p>
+                  <p className="text-sm text-gray-500">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                  </p>
+                </div>
 
-            <button
-              onClick={handleReplaceFile}
-              className="text-sm text-blue-600 hover:underline"
-            >
-              Replace
-            </button>
-
-            <button
-              onClick={handleRemoveFile}
-              className="text-sm text-red-600 hover:underline"
-            >
-              Remove
-            </button>
+                <button
+                  onClick={() => handleRemoveFile(index)}
+                  className="text-sm text-red-600 hover:underline"
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
           </div>
         )}
 
+        {/* Watermark */}
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium mb-2">
+              Watermark Text
+            </label>
+
+            <input
+              type="text"
+              value={watermarkText}
+              onChange={e => setWatermarkText(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+          </div>
+        )}
+
+        {/* Page Numbers */}
         {toolId === "pdf-page-numbers" && (
           <>
             <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2">
                 Page Number Format
               </label>
 
               <select
                 value={pageNumberFormat}
-                onChange={(e) => setPageNumberFormat(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onChange={e => setPageNumberFormat(e.target.value)}
+                className="w-full px-4 py-2 border rounded-lg"
               >
-                <option value="numeric">1, 2, 3</option>
-                <option value="roman">i, ii, iii</option>
-                <option value="alphabet">A, B, C</option>
+                <option value="numeric">1,2,3</option>
+                <option value="roman">i,ii,iii</option>
+                <option value="alphabet">A,B,C</option>
               </select>
             </div>
 
-            {/* ✅ FONT SIZE SLIDER */}
             <div className="mt-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Page Number Font Size ({pageNumberFontSize}px)
+              <label className="block text-sm font-medium mb-2">
+                Font Size ({pageNumberFontSize}px)
               </label>
 
               <input
@@ -332,25 +359,19 @@ export default function ToolUploadPage() {
                 min={8}
                 max={48}
                 value={pageNumberFontSize}
-                onChange={(e) =>
-                  setPageNumberFontSize(Number(e.target.value))
-                }
+                onChange={e => setPageNumberFontSize(Number(e.target.value))}
                 className="w-full"
               />
-
-              <div className="flex justify-between text-xs text-gray-500 mt-1">
-                <span>8px</span>
-                <span>48px</span>
-              </div>
             </div>
           </>
         )}
 
+        {/* Button */}
         <button
           onClick={handleProcessFile}
-          disabled={!selectedFile || isProcessing}
+          disabled={!selectedFiles.length || isProcessing}
           className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${
-            selectedFile && !isProcessing
+            selectedFiles.length && !isProcessing
               ? "bg-black text-white hover:bg-gray-800"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}

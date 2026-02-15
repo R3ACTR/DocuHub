@@ -4,15 +4,23 @@ import { Loader2, CheckCircle, AlertCircle, Copy } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tesseract from "tesseract.js";
-import { getStoredFile, clearStoredFile } from "@/lib/fileStore";
+import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
 import { PDFDocument } from "pdf-lib";
+
+type StoredFile = {
+  data: string;
+  name: string;
+  type: string;
+};
 
 export default function ProcessingPage() {
   const router = useRouter();
   const params = useParams();
   const toolId = params.id as string;
 
-  const [status, setStatus] = useState<"processing" | "done" | "error">("processing");
+  const [status, setStatus] = useState<"processing" | "done" | "error">(
+    "processing"
+  );
   const [progress, setProgress] = useState(0);
   const [text, setText] = useState("");
   const [error, setError] = useState("");
@@ -22,27 +30,35 @@ export default function ProcessingPage() {
   /* ================= RUN TOOL ================= */
   useEffect(() => {
     const run = async () => {
-      const stored = getStoredFile();
+      const stored = getStoredFiles() as StoredFile[];
 
-      if (!stored) {
+      if (!stored.length) {
         router.push(`/tool/${toolId}`);
         return;
       }
 
-      const data = stored.data;
-
       try {
-        if (toolId === "ocr") await runOCR(data);
-        else if (toolId === "pdf-protect") await protectPDF(data);
-        else if (toolId === "jpeg-to-pdf") await imageToPdf(data, "jpg");
-        else if (toolId === "png-to-pdf") await imageToPdf(data, "png");
+        if (toolId === "ocr") await runOCR(stored[0].data);
+
+        else if (toolId === "pdf-protect")
+          await protectPDF(stored[0].data);
+
+        else if (toolId === "jpeg-to-pdf")
+          await imageToPdf(stored[0].data, "jpg");
+
+        else if (toolId === "png-to-pdf")
+          await imageToPdf(stored[0].data, "png");
+
+        else if (toolId === "pdf-compress")
+          await startCompressFlow(stored);
+
         else setStatus("done");
       } catch (e) {
         console.error(e);
         setError("Processing failed");
         setStatus("error");
       } finally {
-        clearStoredFile();
+        clearStoredFiles();
       }
     };
 
@@ -60,6 +76,41 @@ export default function ProcessingPage() {
     });
 
     setText(res.data.text);
+    setStatus("done");
+  };
+
+  /* ================= COMPRESS ================= */
+  const startCompressFlow = async (files: StoredFile[]) => {
+    setProgress(20);
+
+    const targetSize = localStorage.getItem("targetSize") || "1MB";
+
+    const targetBytes = targetSize.includes("KB")
+      ? Number(targetSize.replace("KB", "")) * 1024
+      : Number(targetSize.replace("MB", "")) * 1024 * 1024;
+
+    const res = await fetch("/api/compress", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        files: files.map((f) => ({ base64: f.data })),
+        targetBytes,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (!res.ok || !data?.results?.length) {
+      throw new Error("Compression failed");
+    }
+
+    const bytes = Uint8Array.from(
+      atob(data.results[0].file),
+      (c) => c.charCodeAt(0)
+    );
+
+    setDownloadUrl(makeBlobUrl(bytes));
+    setProgress(100);
     setStatus("done");
   };
 
@@ -119,7 +170,6 @@ export default function ProcessingPage() {
 
   const download = () => {
     if (!downloadUrl) return;
-
     const a = document.createElement("a");
     a.href = downloadUrl;
     a.download = "result.pdf";
@@ -146,12 +196,13 @@ export default function ProcessingPage() {
       </div>
     );
 
-  /* ================= SUCCESS UI ================= */
+  /* ================= SUCCESS ================= */
 
   return (
     <div className="min-h-screen flex items-center justify-center text-center">
       <div>
         <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+
         <h2 className="text-xl font-semibold mb-4">
           {toolId === "jpeg-to-pdf"
             ? "JPEG Converted to PDF!"

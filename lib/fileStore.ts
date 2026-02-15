@@ -1,9 +1,9 @@
-let storedFile: {
+let storedFiles: {
   data: string;
   name: string;
   type: string;
   password?: string;
-} | null = null;
+}[] = [];
 
 export async function storeFile(
   file: File,
@@ -13,12 +13,13 @@ export async function storeFile(
     const reader = new FileReader();
 
     reader.onload = () => {
-      storedFile = {
+      storedFiles.push({
         data: reader.result as string,
         name: file.name,
         type: file.type,
         password: options?.password,
-      };
+      });
+
       resolve(true);
     };
 
@@ -28,10 +29,10 @@ export async function storeFile(
   });
 }
 
-export function getStoredFile() {
-  return storedFile;
+export function getStoredFiles() {
+  return storedFiles;
 }
 
-export function clearStoredFile() {
-  storedFile = null;
+export function clearStoredFiles() {
+  storedFiles = [];
 }
