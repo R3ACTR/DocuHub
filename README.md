@@ -10,6 +10,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat)](LICENSE)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](CONTRIBUTING.md)
 [![Offline First](https://img.shields.io/badge/Offline-First-orange?style=flat)]()
+[![GitHub stars](https://img.shields.io/github/stars/R3ACTR/DocuHub?style=social)](https://github.com/R3ACTR/DocuHub/stargazers)
+[![GitHub forks](https://img.shields.io/github/forks/R3ACTR/DocuHub?style=social)](https://github.com/R3ACTR/DocuHub/network/members)
+[![Node Version](https://img.shields.io/badge/Node-v18+-339933?style=flat&logo=nodedotjs)](https://nodejs.org)
 [![Progressive Web App](https://img.shields.io/badge/PWA-Enabled-5A0FC8?style=flat)]()
 
 [Features](#-features) • [Quick Start](#-quick-start) • [Architecture](#-architecture) • [Contributing](#-contributing) • [Roadmap](#-roadmap) • [Demo](#-demo)
@@ -45,6 +48,7 @@ Most document tools require uploading sensitive files to unknown servers. DocuHu
 - Submit a pull request with a clear description.
 
 Unapproved pull requests may be closed to maintain code quality.
+
 ## ✨ Features
 
 ### 📄 PDF Operations
@@ -147,6 +151,12 @@ Unapproved pull requests may be closed to maintain code quality.
 
 Get **DocuHub** up and running locally in just a few minutes.
 
+### Troubleshooting
+- **pnpm not found?** → `npm install -g pnpm`
+- **Port 3000 in use?** → `lsof -i :3000` then kill the process
+- **WASM errors?** → Use latest Chrome/Edge/Firefox
+- **Slow load?** → Clear browser cache or check internet for initial WASM download
+
 ---
 
 ### 📦 Prerequisites
@@ -244,7 +254,17 @@ All engines run in Web Workers to keep the UI responsive.
 
 We welcome contributions of all kinds! Whether you're fixing bugs, adding features, improving docs, or suggesting ideas—**you're valuable to this project**.
 
+🧑‍💻 Contribution Workflow
+DocuHub follows a maintainer-approved contribution process:
 
+📋 Browse existing issues and pick one
+💡 If you have a new idea or bug report, open an issue first
+⏳ Wait for maintainer approval before starting work
+✅ Once approved and labeled, you may begin development
+🚀 Submit a pull request with a clear description
+
+
+⚠️ Note: Unapproved pull requests may be closed to maintain code quality.
 
 ### First-Time Contributors
 
@@ -293,7 +313,64 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 ---
 
 ## 🎥 Demo
-### Screenshots
+
+Here are some screenshots showing DocuHub in action — all processing happens locally in your browser.
+
+### Landing Page
+**Privacy-first document processing - all tools in one place**
+
+<img width="1440" alt="Landing Page" src="https://github.com/user-attachments/assets/86fdafea-d64e-4d73-bef4-6e13279852eb">
+
+---
+
+### Tool Selection
+**Choose from PDF operations, conversions, OCR, and data tools**
+
+<img width="1440" alt="Tool Selection" src="https://github.com/user-attachments/assets/8ead55fc-10c0-4eaa-8d70-837a0640cda8">
+
+---
+
+### File Upload
+**Simple drag-and-drop interface - all processing happens locally**
+
+<img width="1440" alt="File Upload" src="https://github.com/user-attachments/assets/70e15c5c-ca7b-44d7-ad38-38551494535f">
+
+---
+
+### Processing
+**Visual feedback during processing operations**
+
+<img width="1440" alt="Processing" src="https://github.com/user-attachments/assets/fc5a6d17-80e8-47e1-a284-79f172ad41dc">
+
+---
+
+### Result
+**View and download your processed documents**
+
+<img width="1440" alt="Result" src="https://github.com/user-attachments/assets/ac93d437-0a11-411b-9158-97b315e7ba98">
+
+---
+
+### Merge PDF Flow
+**Upload multiple PDFs to merge into a single document**
+
+<img width="393" alt="Merge PDF – Upload" src="https://github.com/user-attachments/assets/bd7a5017-066b-44db-8ae5-dd716760c58f">
+
+**Review selected files before merging**
+
+<img width="393" alt="Merge PDFs – Files Selected" src="https://github.com/user-attachments/assets/6d1b4a15-df3b-48cb-99e5-44ac3ad3ace8">
+
+**Drag and drop to reorder PDFs - complete control over final document**
+
+<img width="393" alt="Merge PDFs – Reordering" src="https://github.com/user-attachments/assets/bfc70b9f-dcdc-4937-b07c-b49b2608a599">
+
+**Real-time processing with WebAssembly - fast and efficient**
+
+<img width="393" alt="Merge PDFs – Processing" src="https://github.com/user-attachments/assets/9a8098f0-9871-4386-bdee-8563fb6b1aa7">
+
+**Download your merged PDF - all processing done in your browser**
+
+<img width="393" alt="Merge PDFs – Success" src="https://github.com/user-attachments/assets/e5607788-0711-4ff5-9b32-60a5bee6d9e9">
 
 ---
 
@@ -381,7 +458,7 @@ If DocuHub helps you, consider:
 
 <div align="center">
 
-**Made with ❤️ by the open source community**
+**Every bit helps — thank you for using DocuHub! ❤️**
 
 [⬆ Back to Top](#docuhub)
 

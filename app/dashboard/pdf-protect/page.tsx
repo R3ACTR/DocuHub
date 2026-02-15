@@ -137,19 +137,18 @@ export default function PdfProtectPage() {
         className="mb-4 block w-full border border-gray-300 p-2 rounded"
       />
 
-      <button
-        onClick={protectPdf}
-        disabled={loading}
-        className={`px-4 py-2 rounded text-white transition ${
-          loading
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-blue-600 hover:bg-blue-700"
-        }`}
-      >
-        {loading
-          ? "Protecting..."
-          : "Protect PDF"}
-      </button>
+   <button
+  onClick={protectPdf}
+  disabled={loading}
+  className={`px-4 py-2.5 rounded text-white transition ${
+    loading
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-blue-600 hover:bg-blue-700"
+  }`}
+>
+  {loading ? "Protecting..." : "Protect PDF"}
+</button>
+
 
     </div>
 

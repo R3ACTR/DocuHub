@@ -1,6 +1,9 @@
+"use client"; // ✅ MUST BE FIRST LINE
+
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { FeatureCard } from "@/components/FeatureCard";
+import { toast } from "sonner";
 
 const features = [
   {
@@ -30,6 +33,16 @@ export default function Home() {
     <div className="min-h-screen flex flex-col">
 
       <main className="flex-1">
+
+        {/* ✅ Toast Test Button */}
+        <div className="p-4 flex justify-center">
+          <button
+            onClick={() => toast.success("Toast Working ✅")}
+            className="px-4 py-2 bg-black text-white rounded"
+          >
+            Test Toast
+          </button>
+        </div>
 
         {/* Banner moved to Global Header */}
 
@@ -66,7 +79,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-      {/* Footer is now in layout.tsx */}
     </div>
   );
 }
