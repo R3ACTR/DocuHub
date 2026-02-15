@@ -69,7 +69,11 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
   }, [file]);
 
   return (
-    <div className={`relative flex items-center justify-center bg-gray-100 rounded border border-gray-200 overflow-hidden ${className}`}>
+<div
+  className={`relative flex items-center justify-center bg-gray-100 rounded border overflow-hidden
+    ${error ? "border-destructive" : "border-gray-200"}
+    ${className}`}
+>
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center">
 <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
