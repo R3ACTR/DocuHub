@@ -200,14 +200,19 @@ export default function PdfMergePage() {
         </div>
       )}
 
-      {/* Upload Dropzone */}
+      {/* ✅ Accessible Upload Dropzone */}
       <div
         tabIndex={0}
+        aria-label="Upload PDF files"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`relative border-2 border-dashed rounded-3xl p-12 transition-all duration-200 text-center
-          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500
+          focus-visible:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-indigo-500
+          focus-visible:ring-offset-2
+          focus-visible:ring-offset-background
           ${
             isDraggingOver
               ? 'border-indigo-500 bg-indigo-50/50'
