@@ -20,13 +20,12 @@ export function HelpTooltip({ text }: HelpTooltipProps) {
         onMouseLeave={() => setOpen(false)}
         onFocus={() => setOpen(true)}
         onBlur={() => setOpen(false)}
-className="ml-2 text-muted-foreground
-  focus-visible:outline-none
-  focus-visible:ring-2
-  focus-visible:ring-primary
-  focus-visible:ring-offset-2
-  focus-visible:ring-offset-background"
-
+        className="ml-2 text-muted-foreground
+          focus-visible:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-primary
+          focus-visible:ring-offset-2
+          focus-visible:ring-offset-background"
       >
         <Info className="w-4 h-4" />
       </button>

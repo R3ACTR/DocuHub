@@ -1,6 +1,9 @@
+"use client"; // ✅ MUST BE FIRST LINE
+
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { FeatureCard } from "@/components/FeatureCard";
+import { toast } from "sonner";
 
 const features = [
   {
@@ -31,6 +34,16 @@ export default function Home() {
 
       <main className="flex-1">
 
+        {/* ✅ Toast Test Button */}
+        <div className="p-4 flex justify-center">
+          <button
+            onClick={() => toast.success("Toast Working ✅")}
+            className="px-4 py-2 bg-black text-white rounded"
+          >
+            Test Toast
+          </button>
+        </div>
+
         {/* Banner moved to Global Header */}
 
         {/* Hero Content */}
@@ -48,7 +61,7 @@ export default function Home() {
 
           {/* Features Grid Header */}
           <div className="mb-8 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-[#1e1e2e]">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
               What you can do with DocuHub
             </h2>
           </div>
@@ -66,7 +79,6 @@ export default function Home() {
           </div>
         </div>
       </main>
-      {/* Footer is now in layout.tsx */}
     </div>
   );
 }
