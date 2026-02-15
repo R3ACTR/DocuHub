@@ -118,8 +118,9 @@ const [compressedSize, setCompressedSize] = useState<number | null>(null);
       atob(data.results[0].file),
       (c) => c.charCodeAt(0)
     );
+    setCompressedSize(bytes.length);
 
-    setDownloadUrl(makeBlobUrl(bytes));
+   setDownloadUrl(makeBlobUrl(bytes));
     setProgress(100);
     setStatus("done");
   };
