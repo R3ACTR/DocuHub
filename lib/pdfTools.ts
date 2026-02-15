@@ -120,12 +120,21 @@ export const PDF_TOOLS = Object.freeze([
     icon: RotateCw,
   },
 
-  // ✅ NEW — Delete Pages Tool (ONLY ADDITION)
+  // ✅ Delete Pages Tool (YOUR EXISTING ADDITION)
   {
     id: "pdf-delete-pages",
     title: "Delete PDF Pages",
     description: "Remove selected pages from PDF",
     href: "/tool/pdf-delete-pages",
+    icon: Scissors,
+  },
+
+  // ✅ NEW — Reorder Pages Tool (NEW ADD ONLY)
+  {
+    id: "pdf-page-reorder",
+    title: "Reorder PDF Pages",
+    description: "Drag and reorder PDF pages",
+    href: "/tool/pdf-page-reorder",
     icon: Scissors,
   },
 ]);
