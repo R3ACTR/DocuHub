@@ -1,44 +1,43 @@
-import { ArrowRight, LucideIcon } from "lucide-react";
-import Link from "next/link";
+"use client";
 
-interface ToolCardProps {
-    icon: LucideIcon;
-    title: string;
-    description: string;
-    href: string;
-    disabled?: boolean;
-}
+import { Info } from "lucide-react";
+import { useState } from "react";
 
-export function ToolCard({ icon: Icon, title, description, href, disabled }: ToolCardProps) {
-    return (
-        <Link
-            href={disabled ? "#" : href}
-            className={`group relative flex items-center justify-between p-6 rounded-2xl border border-white/40 bg-white/40 backdrop-blur-sm transition-all enabled:hover:bg-white/60
-enabled:hover:shadow-sm
-enabled:hover:border-white/60
- ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
+type HelpTooltipProps = {
+  text: string;
+};
+
+export function HelpTooltip({ text }: HelpTooltipProps) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        aria-label="Tool help"
+        aria-expanded={open}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        className="ml-2 text-muted-foreground
+          focus-visible:outline-none
+          focus-visible:ring-2
+          focus-visible:ring-primary
+          focus-visible:ring-offset-2
+          focus-visible:ring-offset-background"
+      >
+        <Info className="w-4 h-4" />
+      </button>
+
+      {open && (
+        <div
+          role="tooltip"
+          className="absolute left-0 top-6 z-20 w-72 rounded-lg border bg-white p-3 text-sm text-[#1e1e2e] shadow-md"
         >
-            <div className="flex items-center gap-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-transparent sm:bg-transparent text-[#4a5568]">
-                    <Icon className="h-6 w-6 stroke-1" />
-                </div>
-                <div>
-                    <h3 className="text-lg font-medium text-[#1e1e2e]">
-                        {title}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        {description}
-                    </p>
-                </div>
-            </div>
-
-<ArrowRight
-  className={`h-5 w-5 text-[#1e1e2e] transition-all
-    ${disabled
-      ? "opacity-30"
-      : "opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0"
-    }`}
-/>
-        </Link>
-    );
+          {text}
+        </div>
+      )}
+    </span>
+  );
 }
