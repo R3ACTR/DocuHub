@@ -1,4 +1,5 @@
 "use client";
+
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
 import RecentFiles from "@/components/RecentFiles";
@@ -8,18 +9,16 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 export default function Dashboard() {
-  const [mounted, setMounted] = useState(false); // ✅ hydration safety
-
+  const [mounted, setMounted] = useState(false);
   const [lastTool, setLastTool] = useState<string | null>(null);
   const [hideResume, setHideResume] = useState(false);
-
   const [recentTools, setRecentTools] = useState<string[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<string, number>>({});
 
   const pathname = usePathname();
 
   useEffect(() => {
-    setMounted(true); // ✅ ensure client render only
+    setMounted(true);
 
     const storedTool = localStorage.getItem("lastUsedTool");
     const dismissedFor = localStorage.getItem("hideResumeFor");
@@ -40,7 +39,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // ✅ prevent hydration mismatch render
   if (!mounted) return null;
 
   const mostUsedTools = Object.entries(toolCounts)
@@ -53,10 +51,7 @@ export default function Dashboard() {
 
         {/* Resume Banner */}
         {lastTool && !hideResume && (
-          <div className="
-            mb-8 max-w-5xl rounded-xl border p-4 flex items-start justify-between gap-4
-            bg-card border-border shadow-sm
-          ">
+          <div className="mb-8 max-w-5xl rounded-xl border p-4 flex items-start justify-between gap-4 bg-card border-border shadow-sm">
             <div>
               <p className="text-sm text-muted-foreground mb-1">
                 Resume your last tool
@@ -84,12 +79,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* MOST USED TOOLS */}
+        {/* Most Used Tools */}
         {mostUsedTools.length > 0 && (
-          <div className="
-            mb-10 max-w-5xl p-5 rounded-xl
-            bg-card border border-border shadow-sm
-          ">
+          <div className="mb-10 max-w-5xl p-5 rounded-xl bg-card border border-border shadow-sm">
             <h2 className="text-xl font-semibold text-foreground mb-4">
               Most Used Tools
             </h2>
@@ -99,11 +91,7 @@ export default function Dashboard() {
                 <Link
                   key={tool}
                   href={`/tool/${tool}`}
-                  className="
-                  rounded-lg border p-4 transition flex justify-between items-center
-                  bg-card border-border
-                  hover:bg-muted
-                "
+                  className="rounded-lg border p-4 transition flex justify-between items-center bg-card border-border hover:bg-muted"
                 >
                   <span className="font-medium text-foreground">
                     {tool.replace("-", " ").toUpperCase()}
@@ -118,11 +106,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Choose Tool Header */}
-        <div className="
-          mb-12 p-5 rounded-xl
-          bg-card border border-border shadow-sm
-        ">
+        {/* Page Title (STANDARDIZED) */}
+        <div className="mb-12 p-5 rounded-xl bg-card border border-border shadow-sm">
           <h1 className="text-3xl font-semibold tracking-tight mb-2 text-foreground">
             Choose a tool
           </h1>
@@ -172,10 +157,7 @@ export default function Dashboard() {
         </div>
 
         <RecentFiles />
-
-        {/* Recently Deleted */}
         <RecentlyDeletedFiles />
-
       </main>
     </div>
   );
