@@ -228,6 +228,14 @@ pnpm run preview
 ```
 ---
 
+## 📂 Project Structure
+
+app/                 → App Router pages
+components/          → Reusable UI components
+lib/                 → Core processing logic
+public/pdfjs/        → PDF.js workers
+tools.config.ts      → Tool metadata registry
+
 ## 🏗 Architecture Overview
 
 DocuHub follows a modular client-side architecture:
