@@ -5,6 +5,7 @@ import {
   FileText,
   FileUp,
   Image as ImageIcon,
+  RotateCw,
 } from "lucide-react";
 
 export const PDF_TOOLS = Object.freeze([
@@ -108,5 +109,14 @@ export const PDF_TOOLS = Object.freeze([
     description: "Extract embedded images from PDF",
     href: "/tool/pdf-extract-images",
     icon: ImageIcon,
+  },
+
+  // ✅ NEW — Rotate PDF Tool (ONLY ADDITION)
+  {
+    id: "pdf-rotate",
+    title: "Rotate PDF",
+    description: "Rotate PDF pages",
+    href: "/tool/pdf-rotate",
+    icon: RotateCw,
   },
 ]);

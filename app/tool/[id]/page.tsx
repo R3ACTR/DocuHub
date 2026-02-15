@@ -44,6 +44,9 @@ export default function ToolUploadPage() {
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
 
+  /* ✅ ROTATE PDF STATE (ADDED ONLY) */
+  const [rotationAngleOption, setRotationAngleOption] = useState("90");
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
@@ -100,6 +103,7 @@ export default function ToolUploadPage() {
       case "pdf-compress":
       case "pdf-watermark":
       case "pdf-page-numbers":
+      case "pdf-rotate": // ✅ ADDED
         return [".pdf"];
 
       default:
@@ -189,6 +193,11 @@ export default function ToolUploadPage() {
         localStorage.setItem("pageNumberFontSize", pageNumberFontSize.toString());
       }
 
+      /* ✅ ROTATE SAVE (ADDED ONLY) */
+      if (toolId === "pdf-rotate") {
+        localStorage.setItem("pdfRotateAngle", rotationAngleOption);
+      }
+
       clearToolState(toolId);
       router.push(`/tool/${toolId}/processing`);
     } catch {
@@ -271,6 +280,25 @@ export default function ToolUploadPage() {
             onChange={handleFile}
           />
         </motion.div>
+
+        {/* ✅ ROTATE UI (ADDED ONLY) */}
+        {toolId === "pdf-rotate" && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium mb-2">
+              Rotation Angle
+            </label>
+
+            <select
+              value={rotationAngleOption}
+              onChange={e => setRotationAngleOption(e.target.value)}
+              className="w-full px-4 py-2 border rounded-lg"
+            >
+              <option value="90">90°</option>
+              <option value="180">180°</option>
+              <option value="270">270°</option>
+            </select>
+          </div>
+        )}
 
         {selectedFiles.length > 0 && (
           <div className="mt-6 space-y-3">
