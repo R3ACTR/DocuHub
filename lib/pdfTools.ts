@@ -60,15 +60,6 @@ export const PDF_TOOLS = Object.freeze([
     icon: Scissors,
   },
 
-  // ✅ NEW ROTATE TOOL
-  {
-    id: "pdf-rotate",
-    title: "Rotate PDF",
-    description: "Rotate PDF pages",
-    href: "/tool/pdf-rotate",
-    icon: FileText,
-  },
-
   {
     id: "pdf-protect",
     title: "Protect PDF",
