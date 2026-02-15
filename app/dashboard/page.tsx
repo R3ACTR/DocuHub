@@ -106,7 +106,7 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Page Title (STANDARDIZED) */}
+        {/* Page Title */}
         <div className="mb-12 p-5 rounded-xl bg-card border border-border shadow-sm">
           <h1 className="text-3xl font-semibold tracking-tight mb-2 text-foreground">
             Choose a tool

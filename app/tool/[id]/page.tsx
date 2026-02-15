@@ -41,6 +41,8 @@ export default function ToolUploadPage() {
   const [rotationAngle, setRotationAngle] = useState(45);
   const [opacity, setOpacity] = useState(40);
 
+  const [pagesToRotate, setPagesToRotate] = useState("");
+
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
 
@@ -103,6 +105,7 @@ export default function ToolUploadPage() {
       case "pdf-compress":
       case "pdf-watermark":
       case "pdf-page-numbers":
+      case "pdf-rotate":
       case "pdf-rotate": // ✅ ADDED
         return [".pdf"];
 
@@ -180,6 +183,11 @@ export default function ToolUploadPage() {
       if (!ok) {
         setFileError("Failed to process file.");
         return;
+      }
+
+      if (toolId === "pdf-rotate") {
+        localStorage.setItem("rotationAngle", rotationAngle.toString());
+        localStorage.setItem("pagesToRotate", pagesToRotate);
       }
 
       if (toolId === "pdf-watermark") {
@@ -281,21 +289,43 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {/* ✅ ROTATE UI (ADDED ONLY) */}
-        {toolId === "pdf-rotate" && (
+        {/* Pages to Rotate */}
+        {toolId === "pdf-rotate" && selectedFiles.length > 0 && (
           <div className="mt-6">
             <label className="block text-sm font-medium mb-2">
-              Rotation Angle
+              Pages to Rotate (Optional)
+            </label>
+
+            <input
+              type="text"
+              value={pagesToRotate}
+              onChange={e => setPagesToRotate(e.target.value)}
+              placeholder="Example: 1-3,5,7"
+              className="w-full px-4 py-2 border rounded-lg"
+            />
+
+            <p className="text-xs text-gray-500 mt-1">
+              Leave empty to rotate all pages
+            </p>
+          </div>
+        )}
+
+        {/* ✅ ROTATE DEGREE UI */}
+        {toolId === "pdf-rotate" && selectedFiles.length > 0 && (
+          <div className="mt-6">
+            <label className="block text-sm font-medium mb-2">
+              Rotation Degree
             </label>
 
             <select
-              value={rotationAngleOption}
-              onChange={e => setRotationAngleOption(e.target.value)}
+              value={rotationAngle}
+              onChange={(e) => setRotationAngle(Number(e.target.value))}
               className="w-full px-4 py-2 border rounded-lg"
             >
-              <option value="90">90°</option>
-              <option value="180">180°</option>
-              <option value="270">270°</option>
+              <option value={45}>45°</option>
+              <option value={90}>90°</option>
+              <option value={180}>180°</option>
+              <option value={270}>270°</option>
             </select>
           </div>
         )}
@@ -329,7 +359,6 @@ export default function ToolUploadPage() {
                 >
                   Remove
                 </button>
-
               </div>
             ))}
           </div>
