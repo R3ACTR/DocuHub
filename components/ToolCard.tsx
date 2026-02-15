@@ -2,10 +2,6 @@
 
 import Link from "next/link";
 import { LucideIcon } from "lucide-react";
-
-type ToolCardProps = {
-import { LucideIcon, Info } from "lucide-react";
-import Link from "next/link";
 import { useState } from "react";
 
 interface ToolCardProps {
@@ -82,36 +78,6 @@ export function ToolCard({
             →
           </span>
         )}
-      </div>
-    </Link>
-  );
-}
-
-type HelpTooltipProps = {
-  text: string;
-};
-
-export function ToolCard({
-  icon: Icon,
-  title,
-  description,
-  href,
-  disabled,
-  active,
-}: ToolCardProps) {
-  return (
-    <Link
-      href={disabled ? "#" : href}
-      className={`rounded-xl border p-6 transition flex gap-4 items-start
-        ${disabled ? "opacity-50 cursor-not-allowed" : "hover:bg-muted"}
-        ${active ? "border-primary" : "border-border"}
-      `}
-    >
-      <Icon className="w-6 h-6 mt-1 text-foreground" />
-
-      <div>
-        <h3 className="font-semibold text-lg text-foreground">{title}</h3>
-        <p className="text-sm text-muted-foreground">{description}</p>
       </div>
     </Link>
   );
