@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import * as pdfjsLib from 'pdfjs-dist';
+// import * as pdfjsLib from 'pdfjs-dist';
 
-// Configure worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+// // Configure worker
+// pdfjsLib.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
 
 interface PdfThumbnailProps {
   file: File;
@@ -22,6 +22,11 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
     const renderThumbnail = async () => {
       try {
         setLoading(true);
+        const pdfjsLib = await import('pdfjs-dist');
+        if (typeof window !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+          `//unpkg.com/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+      }
         const arrayBuffer = await file.arrayBuffer();
         const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
         const pdf = await loadingTask.promise;
@@ -42,6 +47,7 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
         const renderContext = {
           canvasContext: context,
           viewport: viewport,
+          canvas: canvas,
         };
 
         await page.render(renderContext).promise;
@@ -70,7 +76,7 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
 >
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+<div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
         </div>
       )}
       {error ? (
