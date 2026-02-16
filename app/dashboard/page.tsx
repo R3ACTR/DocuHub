@@ -1,8 +1,8 @@
 "use client";
 
-import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
+import { FileText, ArrowLeftRight, ScanText, LayoutGrid, Search } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
-import ToolCardSkeleton from "@/components/ToolCardSkeleton"; // ✅ ADDED
+import ToolCardSkeleton from "@/components/ToolCardSkeleton";
 import RecentFiles from "@/components/RecentFiles";
 import RecentlyDeletedFiles from "@/components/RecentlyDeletedFiles";
 import { useEffect, useState } from "react";
@@ -12,11 +12,12 @@ import { useRecentFiles } from "@/lib/hooks/useRecentFiles";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
-  const [isLoading, setIsLoading] = useState(true); // ✅ ADDED
+  const [isLoading, setIsLoading] = useState(true);
   const [lastTool, setLastTool] = useState<string | null>(null);
   const [hideResume, setHideResume] = useState(false);
   const [recentTools, setRecentTools] = useState<string[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<string, number>>({});
+  const [search, setSearch] = useState("");
 
   const pathname = usePathname();
 
@@ -32,7 +33,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
-    setTimeout(() => setIsLoading(false), 800); // ✅ ADDED
+    setTimeout(() => setIsLoading(false), 800);
 
     const storedTool = localStorage.getItem("lastUsedTool");
     const dismissedFor = localStorage.getItem("hideResumeFor");
@@ -58,6 +59,37 @@ export default function Dashboard() {
   const mostUsedTools = Object.entries(toolCounts)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
+
+  const tools = [
+    {
+      icon: FileText,
+      title: "PDF Tools",
+      description: "Work with PDF files",
+      href: "/tool/pdf-tools",
+    },
+    {
+      icon: ArrowLeftRight,
+      title: "File Conversion",
+      description: "Convert document formats",
+      href: "/tool/file-conversion",
+    },
+    {
+      icon: ScanText,
+      title: "OCR",
+      description: "Extract text from images",
+      href: "/tool/ocr",
+    },
+    {
+      icon: LayoutGrid,
+      title: "Data Tools",
+      description: "Clean and process files",
+      href: "/tool/data-tools",
+    },
+  ];
+
+  const filteredTools = tools.filter((tool) =>
+    tool.title.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -120,15 +152,27 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Page Title */}
+        {/* Page Title + Search */}
         <div className="mb-12 p-5 rounded-xl bg-card border border-border shadow-sm">
           <h1 className="text-3xl font-semibold tracking-tight mb-2 text-foreground">
             Choose a tool
           </h1>
 
-          <p className="text-muted-foreground text-lg">
+          <p className="text-muted-foreground text-lg mb-4">
             Select what you want to do with your file
           </p>
+
+          {/* Search Bar */}
+          <div className="flex items-center gap-2 border rounded-lg px-3 py-2 bg-background border-border max-w-md">
+            <Search className="w-4 h-4 text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search tools..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-transparent outline-none text-sm w-full"
+            />
+          </div>
         </div>
 
         {/* Tools Grid */}
@@ -140,44 +184,20 @@ export default function Dashboard() {
               <ToolCardSkeleton />
               <ToolCardSkeleton />
             </>
+          ) : filteredTools.length > 0 ? (
+            filteredTools.map((tool) => (
+              <ToolCard
+                key={tool.title}
+                icon={tool.icon}
+                title={tool.title}
+                description={tool.description}
+                href={tool.href}
+                disabled={false}
+                active={pathname === tool.href}
+              />
+            ))
           ) : (
-            <>
-              <ToolCard
-                icon={FileText}
-                title="PDF Tools"
-                description="Work with PDF files"
-                href="/tool/pdf-tools"
-                disabled={false}
-                active={pathname === "/tool/pdf-tools"}
-              />
-
-              <ToolCard
-                icon={ArrowLeftRight}
-                title="File Conversion"
-                description="Convert document formats"
-                href="/tool/file-conversion"
-                disabled={false}
-                active={pathname === "/tool/file-conversion"}
-              />
-
-              <ToolCard
-                icon={ScanText}
-                title="OCR"
-                description="Extract text from images"
-                href="/tool/ocr"
-                disabled={false}
-                active={pathname === "/tool/ocr"}
-              />
-
-              <ToolCard
-                icon={LayoutGrid}
-                title="Data Tools"
-                description="Clean and process files"
-                href="/tool/data-tools"
-                disabled={false}
-                active={pathname === "/tool/data-tools"}
-              />
-            </>
+            <p className="text-muted-foreground">No tools found.</p>
           )}
         </div>
 
