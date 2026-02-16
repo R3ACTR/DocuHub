@@ -275,7 +275,9 @@ export default function ProcessingPage() {
   };
 
   const makeBlobUrl = (bytes:Uint8Array)=>{
-    const blob = new Blob([bytes],{type:"application/pdf"});
+    const normalized = new Uint8Array(bytes.byteLength);
+    normalized.set(bytes);
+    const blob = new Blob([normalized.buffer],{type:"application/pdf"});
     return URL.createObjectURL(blob);
   };
 

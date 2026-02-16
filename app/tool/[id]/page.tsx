@@ -13,7 +13,7 @@ import { PDF_TOOLS } from "@/lib/pdfTools";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-import { clearStoredFiles, storeFile } from "@/lib/fileStore";
+import { clearStoredFiles, storeFiles } from "@/lib/fileStore";
 import {
   saveToolState,
   loadToolState,
@@ -171,15 +171,7 @@ export default function ToolUploadPage() {
     setIsProcessing(true);
 
     try {
-      let ok = true;
-
-      for (const file of selectedFiles) {
-        const res = await storeFile(file);
-        if (!res) {
-          ok = false;
-          break;
-        }
-      }
+      const ok = await storeFiles(selectedFiles);
 
       if (!ok) {
         setFileError("Failed to process file.");
