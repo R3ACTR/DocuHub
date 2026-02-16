@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { encryptPDF } from "@pdfsmaller/pdf-encrypt-lite";
 import { FileUp, Lock, Loader2, FileText } from "lucide-react";
+import { protectPdfBytes } from "@/lib/pdfProtection";
 
 export default function PdfProtectPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -58,7 +58,7 @@ export default function PdfProtectPage() {
 
       const pdfBytes = new Uint8Array(await file.arrayBuffer());
 
-      const encryptedBytes = await encryptPDF(pdfBytes, password, password);
+      const encryptedBytes = await protectPdfBytes(pdfBytes, password);
 
       const blob = new Blob([new Uint8Array(encryptedBytes)], {
         type: "application/pdf",
