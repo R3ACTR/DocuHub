@@ -2,6 +2,7 @@
 
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
+import ToolCardSkeleton from "@/components/ToolCardSkeleton"; // ✅ ADDED
 import RecentFiles from "@/components/RecentFiles";
 import RecentlyDeletedFiles from "@/components/RecentlyDeletedFiles";
 import { useEffect, useState } from "react";
@@ -10,6 +11,7 @@ import { usePathname } from "next/navigation";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // ✅ ADDED
   const [lastTool, setLastTool] = useState<string | null>(null);
   const [hideResume, setHideResume] = useState(false);
   const [recentTools, setRecentTools] = useState<string[]>([]);
@@ -19,6 +21,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     setMounted(true);
+    setTimeout(() => setIsLoading(false), 800); // ✅ ADDED
 
     const storedTool = localStorage.getItem("lastUsedTool");
     const dismissedFor = localStorage.getItem("hideResumeFor");
@@ -119,41 +122,52 @@ export default function Dashboard() {
 
         {/* Tools Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 max-w-5xl">
-          <ToolCard
-            icon={FileText}
-            title="PDF Tools"
-            description="Work with PDF files"
-            href="/tool/pdf-tools"
-            disabled={false}
-            active={pathname === "/tool/pdf-tools"}
-          />
+          {isLoading ? (
+            <>
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+            </>
+          ) : (
+            <>
+              <ToolCard
+                icon={FileText}
+                title="PDF Tools"
+                description="Work with PDF files"
+                href="/tool/pdf-tools"
+                disabled={false}
+                active={pathname === "/tool/pdf-tools"}
+              />
 
-          <ToolCard
-            icon={ArrowLeftRight}
-            title="File Conversion"
-            description="Convert document formats"
-            href="/tool/file-conversion"
-            disabled={false}
-            active={pathname === "/tool/file-conversion"}
-          />
+              <ToolCard
+                icon={ArrowLeftRight}
+                title="File Conversion"
+                description="Convert document formats"
+                href="/tool/file-conversion"
+                disabled={false}
+                active={pathname === "/tool/file-conversion"}
+              />
 
-          <ToolCard
-            icon={ScanText}
-            title="OCR"
-            description="Extract text from images"
-            href="/tool/ocr"
-            disabled={false}
-            active={pathname === "/tool/ocr"}
-          />
+              <ToolCard
+                icon={ScanText}
+                title="OCR"
+                description="Extract text from images"
+                href="/tool/ocr"
+                disabled={false}
+                active={pathname === "/tool/ocr"}
+              />
 
-          <ToolCard
-            icon={LayoutGrid}
-            title="Data Tools"
-            description="Clean and process files"
-            href="/tool/data-tools"
-            disabled={false}
-            active={pathname === "/tool/data-tools"}
-          />
+              <ToolCard
+                icon={LayoutGrid}
+                title="Data Tools"
+                description="Clean and process files"
+                href="/tool/data-tools"
+                disabled={false}
+                active={pathname === "/tool/data-tools"}
+              />
+            </>
+          )}
         </div>
 
         <RecentFiles />
