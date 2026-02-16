@@ -8,6 +8,7 @@ import RecentlyDeletedFiles from "@/components/RecentlyDeletedFiles";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRecentFiles } from "@/lib/hooks/useRecentFiles";
 
 export default function Dashboard() {
   const [mounted, setMounted] = useState(false);
@@ -18,6 +19,16 @@ export default function Dashboard() {
   const [toolCounts, setToolCounts] = useState<Record<string, number>>({});
 
   const pathname = usePathname();
+
+  const {
+    recentFiles,
+    deletedFiles,
+    deleteRecentFile,
+    restoreDeletedFile,
+    permanentlyDeleteFile,
+    clearRecentHistory,
+    clearDeletedHistory,
+  } = useRecentFiles();
 
   useEffect(() => {
     setMounted(true);
@@ -170,8 +181,17 @@ export default function Dashboard() {
           )}
         </div>
 
-        <RecentFiles />
-        <RecentlyDeletedFiles />
+        <RecentFiles
+          files={recentFiles}
+          onDelete={deleteRecentFile}
+          onClear={clearRecentHistory}
+        />
+        <RecentlyDeletedFiles
+          deletedFiles={deletedFiles}
+          onRestore={restoreDeletedFile}
+          onPermanentDelete={permanentlyDeleteFile}
+          onClear={clearDeletedHistory}
+        />
       </main>
     </div>
   );
