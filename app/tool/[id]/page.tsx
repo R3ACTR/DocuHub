@@ -29,6 +29,7 @@ const UPLOAD_ENABLED_TOOLS = new Set([
   "pdf-compress",
   "pdf-watermark",
   "pdf-page-numbers",
+  "pdf-rotate",
 ]);
 const CATEGORY_TOOLS = new Set(["pdf-tools"]);
 const MOVED_TO_DASHBOARD: Record<string, string> = {
@@ -59,13 +60,14 @@ export default function ToolUploadPage() {
   const [opacity, setOpacity] = useState(40);
 
   /* Rotate PDF */
-  const [pagesToRotate, setPagesToRotate] = useState("");
+  const [rotateConfig, setRotateConfig] = useState({
+    angle: 90,
+    pages: "",
+  });
 
   /* Page Numbers */
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
-
-  const [rotationAngleOption, setRotationAngleOption] = useState("90");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -122,6 +124,7 @@ export default function ToolUploadPage() {
       case "pdf-compress":
       case "pdf-watermark":
       case "pdf-page-numbers":
+      case "pdf-rotate":
         return [".pdf"];
       default:
         return [];
@@ -195,9 +198,7 @@ export default function ToolUploadPage() {
       }
 
       if (toolId === "pdf-rotate") {
-        localStorage.setItem("rotationAngle", rotationAngle.toString());
-        localStorage.setItem("pagesToRotate", pagesToRotate);
-        localStorage.setItem("pdfRotateAngle", rotationAngleOption);
+        localStorage.setItem("pdfRotateConfig", JSON.stringify(rotateConfig));
       }
 
       if (toolId === "pdf-watermark") {
@@ -368,6 +369,48 @@ export default function ToolUploadPage() {
                 </button>
               </div>
             ))}
+          </div>
+        )}
+
+        {toolId === "pdf-rotate" && (
+          <div className="mt-6 rounded-xl border bg-white p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rotation Angle
+              </label>
+              <select
+                value={rotateConfig.angle}
+                onChange={e =>
+                  setRotateConfig(prev => ({
+                    ...prev,
+                    angle: Number(e.target.value),
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value={90}>90°</option>
+                <option value={180}>180°</option>
+                <option value={270}>270°</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Pages (optional)
+              </label>
+              <input
+                type="text"
+                value={rotateConfig.pages}
+                onChange={e =>
+                  setRotateConfig(prev => ({
+                    ...prev,
+                    pages: e.target.value,
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                placeholder="all pages, or e.g. 1,3-5"
+              />
+            </div>
           </div>
         )}
 

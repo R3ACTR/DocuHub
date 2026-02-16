@@ -21,6 +21,7 @@ const SUPPORTED_PROCESSING_TOOLS = new Set([
   "pdf-watermark",
   "pdf-compress",
   "pdf-page-numbers",
+  "pdf-rotate",
 ]);
 
 export default function ProcessingPage() {
@@ -76,6 +77,10 @@ export default function ProcessingPage() {
 
         else if (toolId === "pdf-page-numbers") {
           await addPageNumbers(stored[0].data);
+        }
+
+        else if (toolId === "pdf-rotate") {
+          await rotatePDF(stored);
         }
 
       } catch (e) {
@@ -264,6 +269,47 @@ export default function ProcessingPage() {
     setStatus("done");
   };
 
+  /* ================= PDF ROTATE ================= */
+  const rotatePDF = async (files: StoredFile[]) => {
+    const rawConfig = localStorage.getItem("pdfRotateConfig");
+    let angle = 90;
+    let pages = "";
+
+    if (rawConfig) {
+      try {
+        const parsed = JSON.parse(rawConfig) as {
+          angle?: number;
+          pages?: string;
+        };
+        if (typeof parsed.angle === "number") angle = parsed.angle;
+        if (typeof parsed.pages === "string") pages = parsed.pages;
+      } catch {
+        // fallback to defaults when config is invalid
+      }
+    }
+
+    const urls: string[] = [];
+
+    for (const f of files) {
+      const bytes = base64ToBytes(f.data);
+      const pdf = await PDFDocument.load(bytes);
+      const docPages = pdf.getPages();
+      const targets = parsePageSelection(pages, docPages.length);
+
+      docPages.forEach((page, index) => {
+        if (!targets.has(index + 1)) return;
+        const current = page.getRotation().angle;
+        page.setRotation(degrees((current + angle) % 360));
+      });
+
+      const saved = await pdf.save();
+      urls.push(makeBlobUrl(saved));
+    }
+
+    setDownloadUrls(urls);
+    setStatus("done");
+  };
+
   const toRoman = (num: number) => {
     const map: [string, number][] = [
       ["M",1000],["CM",900],["D",500],["CD",400],
@@ -282,6 +328,35 @@ export default function ProcessingPage() {
     let r=""; let n=num;
     while(n>0){ n--; r=String.fromCharCode(65+(n%26))+r; n=Math.floor(n/26); }
     return r;
+  };
+
+  const parsePageSelection = (input: string, totalPages: number) => {
+    const allPages = new Set<number>();
+    for (let i = 1; i <= totalPages; i++) allPages.add(i);
+
+    const trimmed = input.trim();
+    if (!trimmed) return allPages;
+
+    const selected = new Set<number>();
+    const tokens = trimmed.split(",").map(t => t.trim()).filter(Boolean);
+
+    for (const token of tokens) {
+      if (token.includes("-")) {
+        const [startRaw, endRaw] = token.split("-").map(v => parseInt(v, 10));
+        if (Number.isNaN(startRaw) || Number.isNaN(endRaw)) continue;
+        const start = Math.max(1, Math.min(startRaw, endRaw));
+        const end = Math.min(totalPages, Math.max(startRaw, endRaw));
+        for (let p = start; p <= end; p++) selected.add(p);
+        continue;
+      }
+
+      const page = parseInt(token, 10);
+      if (!Number.isNaN(page) && page >= 1 && page <= totalPages) {
+        selected.add(page);
+      }
+    }
+
+    return selected.size ? selected : allPages;
   };
 
   /* ================= HELPERS ================= */
