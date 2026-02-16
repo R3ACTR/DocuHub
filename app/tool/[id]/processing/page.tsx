@@ -13,6 +13,16 @@ type StoredFile = {
   type: string;
 };
 
+const SUPPORTED_PROCESSING_TOOLS = new Set([
+  "ocr",
+  "pdf-protect",
+  "jpeg-to-pdf",
+  "png-to-pdf",
+  "pdf-watermark",
+  "pdf-compress",
+  "pdf-page-numbers",
+]);
+
 export default function ProcessingPage() {
   const router = useRouter();
   const params = useParams();
@@ -33,6 +43,14 @@ export default function ProcessingPage() {
   useEffect(() => {
     const run = async () => {
       const stored = getStoredFiles() as StoredFile[];
+
+      if (!SUPPORTED_PROCESSING_TOOLS.has(toolId)) {
+        setError(
+          `Unsupported tool "${toolId}". Please choose an available tool from the dashboard.`
+        );
+        setStatus("error");
+        return;
+      }
 
       if (!stored?.length) {
         router.push(`/tool/${toolId}`);
@@ -59,8 +77,6 @@ export default function ProcessingPage() {
         else if (toolId === "pdf-page-numbers") {
           await addPageNumbers(stored[0].data);
         }
-
-        else setStatus("done");
 
       } catch (e) {
         console.error(e);
@@ -315,7 +331,13 @@ export default function ProcessingPage() {
       <div className="min-h-screen flex items-center justify-center text-center">
         <div>
           <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3"/>
-          <p>{error}</p>
+          <p>{error || "Processing failed."}</p>
+          <button
+            onClick={() => router.push("/dashboard")}
+            className="mt-4 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+          >
+            Return to Dashboard
+          </button>
         </div>
       </div>
     );
