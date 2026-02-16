@@ -137,6 +137,11 @@ Unapproved pull requests may be closed to maintain code quality.
 
 ### 🔐 Privacy & Security
 
+## Privacy Model
+- All processing inside Web Workers
+- Memory cleared after processing
+- IndexedDB storage fully user-controlled
+
 - **Zero Server Uploads** – Nothing leaves your browser
 - **No Tracking** – No analytics, no cookies, no surveillance
 - **Local Processing** – All computation happens on your device
@@ -228,27 +233,32 @@ pnpm run preview
 ```
 ---
 
-## 🏗️ Architecture
+## 📂 Project Structure
 
-### Core Principles
+app/                 → App Router pages
+components/          → Reusable UI components
+lib/                 → Core processing logic
+public/pdfjs/        → PDF.js workers
+tools.config.ts      → Tool metadata registry
 
-1. **Privacy First** – No data leaves the browser
-2. **Offline Capable** – Full functionality without internet
-3. **Performance** – WebAssembly for heavy lifting
-4. **Modularity** – Clear separation of concerns
-5. **Type Safety** – Strict TypeScript throughout
+## 🏗 Architecture Overview
 
-### WebAssembly Engines
+DocuHub follows a modular client-side architecture:
 
-DocuHub leverages three WASM engines:
+### Frontend Layer
+- Next.js App Router
+- TailwindCSS
+- TypeScript (strict mode)
 
-- **pdf-engine** – PDF manipulation (based on pdf-lib + PDF.js)
-- **image-engine** – Image processing (Sharp compiled to WASM)
-- **ocr-engine** – Text recognition (Tesseract.js)
+### Processing Layer
+- WebAssembly engines
+- Web Workers for heavy computation
+- IndexedDB for persistence
 
-All engines run in Web Workers to keep the UI responsive.
-
----
+### Rendering Layer
+- PDF.js for PDF preview
+- Canvas-based rendering
+- Lazy-loaded workers
 
 ## 🤝 Contributing
 
@@ -312,9 +322,29 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ---
 
+## 🛠 Adding a New Tool
+
+1. Register tool in `tools.config.ts`
+2. Create tool page in `app/tool/[id]/`
+3. Implement processing logic in `lib/`
+4. Add UI using existing components
+5. Test locally
+
 ## 🎥 Demo
 
 Here are some screenshots showing DocuHub in action — all processing happens locally in your browser.
+
+### 🔹 Tool Workflow
+1. Select tool
+2. Upload file
+3. Processing (WebAssembly worker)
+4. Download result
+
+### 🔹 Example: Merge PDF Flow
+- Drag and drop files
+- Reorder pages
+- Preview thumbnails
+- Export merged document
 
 ### Landing Page
 **Privacy-first document processing - all tools in one place**

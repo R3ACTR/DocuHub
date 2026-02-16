@@ -1,63 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 
-type RecentFile = {
+export type RecentFile = {
   fileName: string;
   tool: string;
   time: string;
 };
 
-export default function RecentFiles() {
-  const [files, setFiles] = useState<RecentFile[]>([]);
+interface RecentFilesProps {
+  files: RecentFile[];
+  onDelete: (index: number) => void;
+  onClear: () => void;
+}
 
-  useEffect(() => {
-    const stored = localStorage.getItem("recentFiles");
-    if (stored) {
-      setFiles(JSON.parse(stored) as RecentFile[]);
-    }
-  }, []);
-
-  // ✅ UPDATED — Delete Function (Now Also Saves Deleted History)
-  const handleDelete = (indexToDelete: number) => {
-    const fileToDelete = files[indexToDelete];
-
-    // Remove from recent files
-    const updatedFiles = files.filter((_, index) => index !== indexToDelete);
-    setFiles(updatedFiles);
-    localStorage.setItem("recentFiles", JSON.stringify(updatedFiles));
-
-    // ✅ Add to deleted history
-    const deletedStored = localStorage.getItem("deletedRecentFiles");
-    const deletedFiles = deletedStored ? JSON.parse(deletedStored) : [];
-
-    const deletedEntry = {
-      ...fileToDelete,
-      deletedTime: new Date().toLocaleString(),
-    };
-
-    deletedFiles.unshift(deletedEntry);
-    localStorage.setItem("deletedRecentFiles", JSON.stringify(deletedFiles));
-  };
-
-  // ✅ NEW — Clear Entire History
-  const handleClearHistory = () => {
-    setFiles([]);
-    localStorage.removeItem("recentFiles");
-    localStorage.removeItem("deletedRecentFiles");
-  };
-
+export default function RecentFiles({ files, onDelete, onClear }: RecentFilesProps) {
   if (files.length === 0) return null;
 
   return (
     <div className="mt-12">
-
-      {/* ✅ UPDATED HEADER WITH CLEAR BUTTON */}
+      {/* Header with Clear Button */}
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-semibold">Recent Files</h2>
 
         <button
-          onClick={handleClearHistory}
+          onClick={onClear}
           className="text-red-500 hover:text-red-700 text-sm font-medium"
         >
           Clear History
@@ -68,7 +35,7 @@ export default function RecentFiles() {
         {files.map((file, index) => (
           <div
             key={index}
-            className="p-4 rounded-lg border bg-white shadow-sm flex justify-between"
+            className="p-4 rounded-lg border bg-white shadow-sm flex justify-between items-center"
           >
             <div>
               <p className="font-medium">{file.fileName}</p>
@@ -79,12 +46,12 @@ export default function RecentFiles() {
 
             {/* Delete Button */}
             <button
-              onClick={() => handleDelete(index)}
-              className="text-red-500 hover:text-red-700 text-sm font-medium"
+              onClick={() => onDelete(index)}
+              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
+              title="Delete"
             >
-              Delete
+              <Trash2 size={18} />
             </button>
-
           </div>
         ))}
       </div>

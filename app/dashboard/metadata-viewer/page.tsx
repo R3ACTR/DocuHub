@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { FileUp, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileUp, FileText, Info, Database } from 'lucide-react';
 import * as exifr from 'exifr';
 
 export default function MetadataViewerPage() {
@@ -125,39 +125,41 @@ export default function MetadataViewerPage() {
                 </div>
               </div>
 
-        </div>
-      )}
+            </div>
 
-      {/* FILE PREVIEW */}
-      {file && (
-        <div className="mt-6">
+          </div>
+        )}
 
-          <strong>File Preview:</strong>
+        {/* FILE PREVIEW */}
+        {file && (
+          <div className="bg-white dark:bg-gray-800 shadow-lg rounded-2xl p-6 mt-6">
 
-          {/* Image preview */}
-          {file.type.startsWith("image/") && (
-            <img
-              src={URL.createObjectURL(file)}
-              alt="Preview"
-              className="mt-2 rounded-lg max-h-64"
-            />
-          )}
+            <strong>File Preview:</strong>
 
-          {/* PDF preview */}
-          {file.type === "application/pdf" && (
-            <iframe
-              src={URL.createObjectURL(file)}
-              className="mt-2 w-full h-64 rounded-lg"
-            />
-          )}
+            {/* Image preview */}
+            {file.type.startsWith("image/") && (
+              <img
+                src={URL.createObjectURL(file)}
+                alt="Preview"
+                className="mt-2 rounded-lg max-h-64"
+              />
+            )}
 
-          {/* Text preview */}
-          {file.type.startsWith("text/") && (
-            <iframe
-              src={URL.createObjectURL(file)}
-              className="mt-2 w-full h-64 rounded-lg"
-            />
-          )}
+            {/* PDF preview */}
+            {file.type === "application/pdf" && (
+              <iframe
+                src={URL.createObjectURL(file)}
+                className="mt-2 w-full h-64 rounded-lg"
+              />
+            )}
+
+            {/* Text preview */}
+            {file.type.startsWith("text/") && (
+              <iframe
+                src={URL.createObjectURL(file)}
+                className="mt-2 w-full h-64 rounded-lg"
+              />
+            )}
 
           </div>
         )}
@@ -179,14 +181,11 @@ export default function MetadataViewerPage() {
 
             </div>
 
-          <div>
-            <strong>Size:</strong> {formatSize(file.size)}
           </div>
+        )}
 
       </div>
 
     </div>
-
-  </div>
   );
 }

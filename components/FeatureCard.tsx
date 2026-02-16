@@ -12,7 +12,7 @@ export function FeatureCard({
   description,
 }: FeatureCardProps) {
   return (
-    <div className="glass-card p-8 rounded-2xl flex items-start gap-4 hover:shadow-md transition-shadow">
+    <div className="glass-card p-8 rounded-lg flex items-start gap-4 hover:shadow-md transition-shadow">
       <div className="p-3">
         <Icon className="w-10 h-10 text-muted-foreground stroke-1" />
       </div>
@@ -22,7 +22,9 @@ export function FeatureCard({
           {title}
         </h3>
 
-        <p className="text-muted-foreground">{description}</p>
+        <p className="text-muted-foreground">
+          {description}
+        </p>
       </div>
     </div>
   );

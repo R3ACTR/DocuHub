@@ -1,25 +1,38 @@
 "use client";
+
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import { ToolCard } from "@/components/ToolCard";
+import ToolCardSkeleton from "@/components/ToolCardSkeleton"; // ✅ ADDED
 import RecentFiles from "@/components/RecentFiles";
 import RecentlyDeletedFiles from "@/components/RecentlyDeletedFiles";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useRecentFiles } from "@/lib/hooks/useRecentFiles";
 
 export default function Dashboard() {
-  const [mounted, setMounted] = useState(false); // ✅ hydration safety
-
+  const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true); // ✅ ADDED
   const [lastTool, setLastTool] = useState<string | null>(null);
   const [hideResume, setHideResume] = useState(false);
-
   const [recentTools, setRecentTools] = useState<string[]>([]);
   const [toolCounts, setToolCounts] = useState<Record<string, number>>({});
 
   const pathname = usePathname();
 
+  const {
+    recentFiles,
+    deletedFiles,
+    deleteRecentFile,
+    restoreDeletedFile,
+    permanentlyDeleteFile,
+    clearRecentHistory,
+    clearDeletedHistory,
+  } = useRecentFiles();
+
   useEffect(() => {
-    setMounted(true); // ✅ ensure client render only
+    setMounted(true);
+    setTimeout(() => setIsLoading(false), 800); // ✅ ADDED
 
     const storedTool = localStorage.getItem("lastUsedTool");
     const dismissedFor = localStorage.getItem("hideResumeFor");
@@ -40,7 +53,6 @@ export default function Dashboard() {
     }
   }, []);
 
-  // ✅ prevent hydration mismatch render
   if (!mounted) return null;
 
   const mostUsedTools = Object.entries(toolCounts)
@@ -53,10 +65,7 @@ export default function Dashboard() {
 
         {/* Resume Banner */}
         {lastTool && !hideResume && (
-          <div className="
-            mb-8 max-w-5xl rounded-xl border p-4 flex items-start justify-between gap-4
-            bg-card border-border shadow-sm
-          ">
+          <div className="mb-8 max-w-5xl rounded-xl border p-4 flex items-start justify-between gap-4 bg-card border-border shadow-sm">
             <div>
               <p className="text-sm text-muted-foreground mb-1">
                 Resume your last tool
@@ -84,12 +93,9 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* MOST USED TOOLS */}
+        {/* Most Used Tools */}
         {mostUsedTools.length > 0 && (
-          <div className="
-            mb-10 max-w-5xl p-5 rounded-xl
-            bg-card border border-border shadow-sm
-          ">
+          <div className="mb-10 max-w-5xl p-5 rounded-xl bg-card border border-border shadow-sm">
             <h2 className="text-xl font-semibold text-foreground mb-4">
               Most Used Tools
             </h2>
@@ -99,11 +105,7 @@ export default function Dashboard() {
                 <Link
                   key={tool}
                   href={`/tool/${tool}`}
-                  className="
-                  rounded-lg border p-4 transition flex justify-between items-center
-                  bg-card border-border
-                  hover:bg-muted
-                "
+                  className="rounded-lg border p-4 transition flex justify-between items-center bg-card border-border hover:bg-muted"
                 >
                   <span className="font-medium text-foreground">
                     {tool.replace("-", " ").toUpperCase()}
@@ -118,11 +120,8 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Choose Tool Header */}
-        <div className="
-          mb-12 p-5 rounded-xl
-          bg-card border border-border shadow-sm
-        ">
+        {/* Page Title */}
+        <div className="mb-12 p-5 rounded-xl bg-card border border-border shadow-sm">
           <h1 className="text-3xl font-semibold tracking-tight mb-2 text-foreground">
             Choose a tool
           </h1>
@@ -134,48 +133,65 @@ export default function Dashboard() {
 
         {/* Tools Grid */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2 max-w-5xl">
-          <ToolCard
-            icon={FileText}
-            title="PDF Tools"
-            description="Work with PDF files"
-            href="/tool/pdf-tools"
-            disabled={false}
-            active={pathname === "/tool/pdf-tools"}
-          />
+          {isLoading ? (
+            <>
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+              <ToolCardSkeleton />
+            </>
+          ) : (
+            <>
+              <ToolCard
+                icon={FileText}
+                title="PDF Tools"
+                description="Work with PDF files"
+                href="/tool/pdf-tools"
+                disabled={false}
+                active={pathname === "/tool/pdf-tools"}
+              />
 
-          <ToolCard
-            icon={ArrowLeftRight}
-            title="File Conversion"
-            description="Convert document formats"
-            href="/tool/file-conversion"
-            disabled={false}
-            active={pathname === "/tool/file-conversion"}
-          />
+              <ToolCard
+                icon={ArrowLeftRight}
+                title="File Conversion"
+                description="Convert document formats"
+                href="/tool/file-conversion"
+                disabled={false}
+                active={pathname === "/tool/file-conversion"}
+              />
 
-          <ToolCard
-            icon={ScanText}
-            title="OCR"
-            description="Extract text from images"
-            href="/tool/ocr"
-            disabled={false}
-            active={pathname === "/tool/ocr"}
-          />
+              <ToolCard
+                icon={ScanText}
+                title="OCR"
+                description="Extract text from images"
+                href="/tool/ocr"
+                disabled={false}
+                active={pathname === "/tool/ocr"}
+              />
 
-          <ToolCard
-            icon={LayoutGrid}
-            title="Data Tools"
-            description="Clean and process files"
-            href="/tool/data-tools"
-            disabled={false}
-            active={pathname === "/tool/data-tools"}
-          />
+              <ToolCard
+                icon={LayoutGrid}
+                title="Data Tools"
+                description="Clean and process files"
+                href="/tool/data-tools"
+                disabled={false}
+                active={pathname === "/tool/data-tools"}
+              />
+            </>
+          )}
         </div>
 
-        <RecentFiles />
-
-        {/* Recently Deleted */}
-        <RecentlyDeletedFiles />
-
+        <RecentFiles
+          files={recentFiles}
+          onDelete={deleteRecentFile}
+          onClear={clearRecentHistory}
+        />
+        <RecentlyDeletedFiles
+          deletedFiles={deletedFiles}
+          onRestore={restoreDeletedFile}
+          onPermanentDelete={permanentlyDeleteFile}
+          onClear={clearDeletedHistory}
+        />
       </main>
     </div>
   );

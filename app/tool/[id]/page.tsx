@@ -13,8 +13,7 @@ import { PDF_TOOLS } from "@/lib/pdfTools";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
-
-import { storeFiles } from "@/lib/fileStore";
+import { clearStoredFiles, storeFile } from "@/lib/fileStore";
 import {
   saveToolState,
   loadToolState,
@@ -42,6 +41,13 @@ export default function ToolUploadPage() {
   const [rotationAngle, setRotationAngle] = useState(45);
   const [opacity, setOpacity] = useState(40);
 
+  /* Rotate PDF */
+  const [pagesToRotate, setPagesToRotate] = useState("");
+
+  /* Page Numbers */
+  const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
+  const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
+
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [persistedFileMeta, setPersistedFileMeta] = useState<{
@@ -61,11 +67,13 @@ export default function ToolUploadPage() {
   useEffect(() => {
     if (!toolId || !selectedFiles.length) return;
 
+    const file = selectedFiles[0];
+
     saveToolState(toolId, {
       fileMeta: {
-        name: selectedFiles[0].name,
-        size: selectedFiles[0].size,
-        type: selectedFiles[0].type,
+        name: file.name,
+        size: file.size,
+        type: file.type,
       },
     });
   }, [toolId, selectedFiles]);
@@ -87,20 +95,18 @@ export default function ToolUploadPage() {
     switch (toolId) {
       case "ocr":
         return [".jpg", ".jpeg", ".png"];
-
       case "jpeg-to-pdf":
         return [".jpg", ".jpeg"];
-
       case "png-to-pdf":
         return [".png"];
-
       case "pdf-merge":
       case "pdf-split":
       case "pdf-protect":
       case "pdf-compress":
       case "pdf-watermark":
+      case "pdf-page-numbers":
+      case "pdf-rotate":
         return [".pdf"];
-
       default:
         return [];
     }
@@ -121,33 +127,38 @@ export default function ToolUploadPage() {
 
   /* File select */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    clearStoredFiles();
+
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
     const allowed = getSupportedTypes();
+    const validFiles: File[] = [];
 
     for (const file of files) {
       const ext = "." + file.name.split(".").pop()?.toLowerCase();
 
       if (allowed.length && !allowed.includes(ext)) {
-        setFileError(`Unsupported file type. Allowed: ${allowed.join(", ")}`);
+        setFileError(`Unsupported file type: ${file.name}`);
         return;
       }
 
       if (file.size > MAX_FILE_SIZE) {
-        setFileError("One or more files exceed 10MB limit.");
+        setFileError(`File too large: ${file.name}`);
         return;
       }
+
+      validFiles.push(file);
     }
 
     setFileError(null);
-    setSelectedFiles(files);
+    setSelectedFiles(validFiles);
     setHasUnsavedWork(true);
   };
 
-  /* Remove single file */
-  const removeFile = (index: number) => {
-    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+  /* Remove file */
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   /* Replace */
@@ -160,18 +171,38 @@ export default function ToolUploadPage() {
     setIsProcessing(true);
 
     try {
-      const ok = await storeFiles(selectedFiles);
+      let ok = true;
+
+      for (const file of selectedFiles) {
+        const res = await storeFile(file);
+        if (!res) {
+          ok = false;
+          break;
+        }
+      }
 
       if (!ok) {
-        setFileError("Failed to process files.");
-        setIsProcessing(false);
+        setFileError("Failed to process file.");
         return;
+      }
+
+      if (toolId === "pdf-rotate") {
+        localStorage.setItem("rotationAngle", rotationAngle.toString());
+        localStorage.setItem("pagesToRotate", pagesToRotate);
       }
 
       if (toolId === "pdf-watermark") {
         localStorage.setItem("watermarkRotation", rotationAngle.toString());
         localStorage.setItem("watermarkText", watermarkText);
         localStorage.setItem("watermarkOpacity", opacity.toString());
+      }
+
+      if (toolId === "pdf-page-numbers") {
+        localStorage.setItem("pageNumberFormat", pageNumberFormat);
+        localStorage.setItem(
+          "pageNumberFontSize",
+          pageNumberFontSize.toString()
+        );
       }
 
       clearToolState(toolId);
@@ -202,7 +233,7 @@ export default function ToolUploadPage() {
           <p className="text-muted-foreground mb-12">Choose a PDF tool</p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            {PDF_TOOLS.map((tool) => (
+            {PDF_TOOLS.map(tool => (
               <ToolCard key={tool.id} {...tool} />
             ))}
           </div>
@@ -228,7 +259,7 @@ export default function ToolUploadPage() {
 
         <motion.div
           onClick={() => fileInputRef.current?.click()}
-          onDragOver={(e) => {
+          onDragOver={e => {
             e.preventDefault();
             setIsDraggingOver(true);
           }}
@@ -259,13 +290,13 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {/* FILE LIST */}
+        {/* File list */}
         {selectedFiles.length > 0 && (
           <div className="mt-6 space-y-3">
-            {selectedFiles.map((file, i) => (
+            {selectedFiles.map((file, index) => (
               <div
-                key={i}
-                className="flex items-center gap-3 p-4 border rounded-xl bg-white shadow-sm"
+                key={index}
+                className="flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm"
               >
                 {getFileIcon(file)}
 
@@ -277,7 +308,14 @@ export default function ToolUploadPage() {
                 </div>
 
                 <button
-                  onClick={() => removeFile(i)}
+                  onClick={handleReplaceFile}
+                  className="text-sm text-blue-600 hover:underline mr-3"
+                >
+                  Replace
+                </button>
+
+                <button
+                  onClick={() => handleRemoveFile(index)}
                   className="text-sm text-red-600 hover:underline"
                 >
                   Remove

@@ -1,5 +1,8 @@
+"use client";
+
 import { ArrowRight, LucideIcon } from "lucide-react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 interface ToolCardProps {
   icon: LucideIcon;
@@ -15,42 +18,68 @@ export function ToolCard({
   title,
   description,
   href,
-  disabled,
-  active,
+  disabled = false,
+  active = false,
 }: ToolCardProps) {
-  return (
-    <Link
-      href={disabled ? "#" : href}
-      className={`group relative flex items-center justify-between p-6 rounded-2xl border backdrop-blur-sm transition-all duration-300 ease-out
-      ${
-        active
-          ? "border-primary bg-primary/10 shadow-md"
-          : `
-            border-border
-            bg-card
-            hover:bg-muted
-            hover:shadow-xl hover:-translate-y-1
-          `
-      }
-      ${disabled ? "opacity-60 cursor-not-allowed" : ""}`}
-    >
-      <div className="flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl text-muted-foreground">
-          <Icon className="h-6 w-6 stroke-1" />
+  if (disabled) {
+    return (
+      <div
+        className={cn(
+          "group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all",
+          "opacity-50 cursor-not-allowed border-dashed"
+        )}
+      >
+        <div className="absolute right-4 top-4 opacity-0 transition-opacity group-hover:opacity-100">
+          <span className="text-xs font-medium px-2 py-1 rounded bg-muted text-muted-foreground">
+            Coming Soon
+          </span>
         </div>
 
-        <div>
-          <h3 className="text-lg font-medium text-foreground">{title}</h3>
-
-          <p className="text-sm text-muted-foreground">
+        <div className="mb-4">
+          <div className="mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+            <Icon className="h-5 w-5" aria-hidden="true" />
+          </div>
+          <h3 className="font-semibold text-foreground">{title}</h3>
+          <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
             {description}
           </p>
         </div>
       </div>
+    );
+  }
 
-      <ArrowRight
-        className="h-5 w-5 text-muted-foreground opacity-0 translate-x-2 transition-all group-hover:opacity-100"
-      />
+  return (
+    <Link
+      href={href}
+      className={cn(
+        "group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all hover:bg-muted/50 hover:shadow-md",
+        active ? "border-primary ring-1 ring-primary" : "border-border"
+      )}
+    >
+      <div className="absolute right-4 top-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+        <ArrowRight
+          className="h-5 w-5 -rotate-45 transition-transform group-hover:rotate-0"
+          aria-hidden="true"
+        />
+      </div>
+
+      <div className="mb-4">
+        <div
+          className={cn(
+            "mb-4 inline-flex h-10 w-10 items-center justify-center rounded-lg transition-colors",
+            active
+              ? "bg-primary/10 text-primary"
+              : "bg-primary/5 text-primary group-hover:bg-primary/10"
+          )}
+        >
+          <Icon className="h-5 w-5" aria-hidden="true" />
+        </div>
+
+        <h3 className="font-semibold text-foreground">{title}</h3>
+        <p className="mt-1 text-sm text-muted-foreground line-clamp-2">
+          {description}
+        </p>
+      </div>
     </Link>
   );
 }

@@ -61,7 +61,7 @@ export default function Home() {
 
           {/* Features Grid Header */}
           <div className="mb-8 text-center">
-            <h2 className="text-2xl md:text-3xl font-bold text-[#1e1e2e]">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground">
               What you can do with DocuHub
             </h2>
           </div>

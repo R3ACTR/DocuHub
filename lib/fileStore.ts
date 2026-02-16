@@ -13,7 +13,12 @@ export async function storeFiles(
     const results = await Promise.all(
       files.map(
         (file) =>
-          new Promise<any>((resolve, reject) => {
+          new Promise<{
+            data: string;
+            name: string;
+            type: string;
+            password?: string;
+          }>((resolve, reject) => {
             const reader = new FileReader();
 
             reader.onload = () =>

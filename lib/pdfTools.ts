@@ -5,6 +5,8 @@ import {
   FileText,
   FileUp,
   Image as ImageIcon,
+  RotateCw,
+  FileKey, // ✅ ADDED (for password remover icon)
 } from "lucide-react";
 
 export const PDF_TOOLS = Object.freeze([
@@ -63,7 +65,7 @@ export const PDF_TOOLS = Object.freeze([
     id: "pdf-protect",
     title: "Protect PDF",
     description: "Add password protection",
-    href: "/tool/pdf-protect",
+    href: "/dashboard/pdf-protect",
     icon: FileText,
   },
 
@@ -92,12 +94,57 @@ export const PDF_TOOLS = Object.freeze([
     icon: FileText,
   },
 
-  // ✅ NEW — Page Numbers Tool
+  // Page Numbers Tool
   {
     id: "pdf-page-numbers",
     title: "Add Page Numbers",
     description: "Insert page numbers into PDF",
     href: "/tool/pdf-page-numbers",
     icon: FileText,
+  },
+
+  // Extract Images Tool
+  {
+    id: "pdf-extract-images",
+    title: "Extract Images",
+    description: "Extract embedded images from PDF",
+    href: "/tool/pdf-extract-images",
+    icon: ImageIcon,
+  },
+
+  // ✅ Rotate PDF Tool
+  {
+    id: "pdf-rotate",
+    title: "Rotate PDF",
+    description: "Rotate PDF pages",
+    href: "/tool/pdf-rotate",
+    icon: RotateCw,
+  },
+
+  // ✅ Delete Pages Tool (YOUR EXISTING ADDITION)
+  {
+    id: "pdf-delete-pages",
+    title: "Delete PDF Pages",
+    description: "Remove selected pages from PDF",
+    href: "/tool/pdf-delete-pages",
+    icon: Scissors,
+  },
+
+  // ✅ NEW — Reorder Pages Tool (NEW ADD ONLY)
+  {
+    id: "pdf-page-reorder",
+    title: "Reorder PDF Pages",
+    description: "Drag and reorder PDF pages",
+    href: "/tool/pdf-page-reorder",
+    icon: Scissors,
+  },
+
+  // ✅ NEW — PDF Password Remover Tool (ADDED NOW)
+  {
+    id: "pdf-password-remover",
+    title: "PDF Password Remover",
+    description: "Remove password from protected PDF files",
+    href: "/tool/pdf-password-remover",
+    icon: FileKey,
   },
 ]);
