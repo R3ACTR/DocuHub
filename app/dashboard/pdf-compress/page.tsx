@@ -15,14 +15,11 @@ export default function PdfCompressPage() {
 
   // Revoke previous URL when previewUrl changes or on unmount
   useEffect(() => {
-    // Revoke the previous URL if it exists
     if (prevPreviewUrlRef.current && prevPreviewUrlRef.current !== previewUrl) {
       URL.revokeObjectURL(prevPreviewUrlRef.current);
     }
-    // Update the ref to current URL
     prevPreviewUrlRef.current = previewUrl;
 
-    // Cleanup on unmount
     return () => {
       if (prevPreviewUrlRef.current) {
         URL.revokeObjectURL(prevPreviewUrlRef.current);
@@ -30,7 +27,6 @@ export default function PdfCompressPage() {
     };
   }, [previewUrl]);
 
-  // ✅ NEW — Compression Level State (Default Medium)
   const [compressionLevel, setCompressionLevel] = useState<
     "low" | "medium" | "high"
   >("medium");
@@ -111,7 +107,10 @@ export default function PdfCompressPage() {
     }
   };
 
+  // ✅ IMPROVED — Supports B / KB / MB
   const formatSize = (bytes: number) => {
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
     return (bytes / (1024 * 1024)).toFixed(2) + " MB";
   };
 
@@ -183,7 +182,6 @@ export default function PdfCompressPage() {
               </div>
             )}
 
-            {/* ✅ NEW — Compression Level Selector */}
             <div className="mt-6 text-left">
               <p className="font-medium mb-2">Compression Level</p>
 
