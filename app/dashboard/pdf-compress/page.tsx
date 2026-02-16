@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { PDFDocument } from 'pdf-lib';
-import { FileUp, Download, Loader2, FileText } from 'lucide-react';
+import { FileUp, Download, Loader2, FileText, Copy } from 'lucide-react'; // ✅ ADDED Copy
 
 export default function PdfCompressPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -13,7 +13,6 @@ export default function PdfCompressPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const prevPreviewUrlRef = useRef<string | null>(null);
 
-  // Revoke previous URL when previewUrl changes or on unmount
   useEffect(() => {
     if (prevPreviewUrlRef.current && prevPreviewUrlRef.current !== previewUrl) {
       URL.revokeObjectURL(prevPreviewUrlRef.current);
@@ -30,6 +29,13 @@ export default function PdfCompressPage() {
   const [compressionLevel, setCompressionLevel] = useState<
     "low" | "medium" | "high"
   >("medium");
+
+  // ✅ NEW — Copy File Name Function
+  const copyFileName = async () => {
+    if (!file) return;
+    await navigator.clipboard.writeText(file.name);
+    alert("File name copied!");
+  };
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -107,7 +113,6 @@ export default function PdfCompressPage() {
     }
   };
 
-  // ✅ IMPROVED — Supports B / KB / MB
   const formatSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(2) + " KB";
@@ -153,7 +158,18 @@ export default function PdfCompressPage() {
         {file && (
           <>
             <div className="mt-3 text-sm text-gray-600">
-              <p>Selected: {file.name}</p>
+              
+              {/* ✅ UPDATED FILE NAME ROW */}
+              <div className="flex items-center justify-center gap-2">
+                <p>Selected: {file.name}</p>
+                <button
+                  onClick={copyFileName}
+                  className="p-1 hover:bg-gray-200 rounded"
+                  title="Copy file name"
+                >
+                  <Copy className="w-4 h-4" />
+                </button>
+              </div>
 
               {originalSize && (
                 <p>Original size: {formatSize(originalSize)}</p>
