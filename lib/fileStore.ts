@@ -5,28 +5,41 @@ let storedFiles: {
   password?: string;
 }[] = [];
 
-export async function storeFile(
-  file: File,
+export async function storeFiles(
+  files: File[],
   options?: { password?: string }
 ): Promise<boolean> {
-  return new Promise((resolve) => {
-    const reader = new FileReader();
+  try {
+    const results = await Promise.all(
+      files.map(
+        (file) =>
+          new Promise<{
+            data: string;
+            name: string;
+            type: string;
+            password?: string;
+          }>((resolve, reject) => {
+            const reader = new FileReader();
 
-    reader.onload = () => {
-      storedFiles.push({
-        data: reader.result as string,
-        name: file.name,
-        type: file.type,
-        password: options?.password,
-      });
+            reader.onload = () =>
+              resolve({
+                data: reader.result as string,
+                name: file.name,
+                type: file.type,
+                password: options?.password,
+              });
 
-      resolve(true);
-    };
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          })
+      )
+    );
 
-    reader.onerror = () => resolve(false);
-
-    reader.readAsDataURL(file);
-  });
+    storedFiles = results;
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function getStoredFiles() {

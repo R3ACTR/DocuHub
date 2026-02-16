@@ -14,7 +14,6 @@ import { useRouter, useParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { clearStoredFiles, storeFile } from "@/lib/fileStore";
-
 import {
   saveToolState,
   loadToolState,
@@ -37,17 +36,17 @@ export default function ToolUploadPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
 
+  /* Watermark */
   const [watermarkText, setWatermarkText] = useState("");
   const [rotationAngle, setRotationAngle] = useState(45);
   const [opacity, setOpacity] = useState(40);
 
+  /* Rotate PDF */
   const [pagesToRotate, setPagesToRotate] = useState("");
 
+  /* Page Numbers */
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
-
-  /* ✅ ROTATE PDF STATE (ADDED ONLY) */
-  const [rotationAngleOption, setRotationAngleOption] = useState("90");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -57,12 +56,14 @@ export default function ToolUploadPage() {
     type: string;
   } | null>(null);
 
+  /* Load saved state */
   useEffect(() => {
     if (!toolId) return;
     const stored = loadToolState(toolId);
     if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
   }, [toolId]);
 
+  /* Save state */
   useEffect(() => {
     if (!toolId || !selectedFiles.length) return;
 
@@ -77,6 +78,7 @@ export default function ToolUploadPage() {
     });
   }, [toolId, selectedFiles]);
 
+  /* Warn before leaving */
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (!hasUnsavedWork) return;
@@ -88,17 +90,15 @@ export default function ToolUploadPage() {
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedWork]);
 
+  /* Supported types */
   const getSupportedTypes = () => {
     switch (toolId) {
       case "ocr":
         return [".jpg", ".jpeg", ".png"];
-
       case "jpeg-to-pdf":
         return [".jpg", ".jpeg"];
-
       case "png-to-pdf":
         return [".png"];
-
       case "pdf-merge":
       case "pdf-split":
       case "pdf-protect":
@@ -106,14 +106,13 @@ export default function ToolUploadPage() {
       case "pdf-watermark":
       case "pdf-page-numbers":
       case "pdf-rotate":
-      case "pdf-rotate": // ✅ ADDED
         return [".pdf"];
-
       default:
         return [];
     }
   };
 
+  /* Icon */
   const getFileIcon = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
 
@@ -126,6 +125,7 @@ export default function ToolUploadPage() {
     return <FileText className="w-6 h-6 text-gray-400" />;
   };
 
+  /* File select */
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     clearStoredFiles();
 
@@ -156,14 +156,15 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
+  /* Remove file */
   const handleRemoveFile = (index: number) => {
     setSelectedFiles(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleReplaceFile = () => {
-    fileInputRef.current?.click();
-  };
+  /* Replace */
+  const handleReplaceFile = () => fileInputRef.current?.click();
 
+  /* Process */
   const handleProcessFile = async () => {
     if (!selectedFiles.length) return;
 
@@ -198,12 +199,10 @@ export default function ToolUploadPage() {
 
       if (toolId === "pdf-page-numbers") {
         localStorage.setItem("pageNumberFormat", pageNumberFormat);
-        localStorage.setItem("pageNumberFontSize", pageNumberFontSize.toString());
-      }
-
-      /* ✅ ROTATE SAVE (ADDED ONLY) */
-      if (toolId === "pdf-rotate") {
-        localStorage.setItem("pdfRotateAngle", rotationAngleOption);
+        localStorage.setItem(
+          "pageNumberFontSize",
+          pageNumberFontSize.toString()
+        );
       }
 
       clearToolState(toolId);
@@ -225,6 +224,7 @@ export default function ToolUploadPage() {
     router.push("/dashboard");
   };
 
+  /* Tools page */
   if (toolId === "pdf-tools") {
     return (
       <div className="min-h-screen flex flex-col">
@@ -242,6 +242,7 @@ export default function ToolUploadPage() {
     );
   }
 
+  /* Upload page */
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
@@ -289,81 +290,7 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {/* Pages to Rotate */}
-        {toolId === "pdf-rotate" && selectedFiles.length > 0 && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium mb-2">
-              Pages to Rotate (Optional)
-            </label>
-
-            <input
-              type="text"
-              value={pagesToRotate}
-              onChange={e => setPagesToRotate(e.target.value)}
-              placeholder="Example: 1-3,5,7"
-              className="w-full px-4 py-2 border rounded-lg"
-            />
-
-            <p className="text-xs text-gray-500 mt-1">
-              Leave empty to rotate all pages
-            </p>
-          </div>
-        )}
-
-        {/* ✅ ROTATE DEGREE UI */}
-        {toolId === "pdf-rotate" && selectedFiles.length > 0 && (
-          <div className="mt-6">
-            <label className="block text-sm font-medium mb-2">
-              Rotation Degree
-            </label>
-
-            <select
-              value={rotationAngle}
-              onChange={(e) => setRotationAngle(Number(e.target.value))}
-              className="w-full px-4 py-2 border rounded-lg"
-            >
-              <option value={45}>45°</option>
-              <option value={90}>90°</option>
-              <option value={180}>180°</option>
-              <option value={270}>270°</option>
-            </select>
-          </div>
-        )}
-
-        {/* Page Numbers UI */}
-        {toolId === "pdf-page-numbers" && (
-          <div className="mt-6 space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Page Number Format
-              </label>
-              <select
-                value={pageNumberFormat}
-                onChange={e => setPageNumberFormat(e.target.value)}
-                className="w-full px-4 py-2 border rounded-lg"
-              >
-                <option value="numeric">Numeric (1, 2, 3)</option>
-                <option value="Roman">Roman (I, II, III)</option>
-                <option value="letter">Letter (A, B, C)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium mb-2">
-                Font Size: {pageNumberFontSize}px
-              </label>
-              <input
-                type="range"
-                min="8"
-                max="24"
-                value={pageNumberFontSize}
-                onChange={e => setPageNumberFontSize(Number(e.target.value))}
-                className="w-full"
-              />
-            </div>
-          </div>
-        )}
-
+        {/* File list */}
         {selectedFiles.length > 0 && (
           <div className="mt-6 space-y-3">
             {selectedFiles.map((file, index) => (
@@ -413,7 +340,7 @@ export default function ToolUploadPage() {
               Processing...
             </span>
           ) : (
-            "Process File"
+            "Process Files"
           )}
         </button>
 
@@ -424,4 +351,3 @@ export default function ToolUploadPage() {
     </div>
   );
 }
-
