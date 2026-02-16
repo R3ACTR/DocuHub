@@ -10,9 +10,10 @@ interface SortablePdfItemProps {
   file: File;
   index: number;
   onRemove: () => void;
+  uploadedTime?: string; // ✅ ADDED
 }
 
-export function SortablePdfItem({ id, file, index, onRemove }: SortablePdfItemProps) {
+export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: SortablePdfItemProps) {
   const {
     attributes,
     listeners,
@@ -62,9 +63,17 @@ export function SortablePdfItem({ id, file, index, onRemove }: SortablePdfItemPr
             {file.name}
           </p>
         </div>
+
         <p className="text-xs text-gray-500 mt-1">
           {formatFileSize(file.size)}
         </p>
+
+        {/* ✅ ADDED TIMESTAMP DISPLAY */}
+        {uploadedTime && (
+          <p className="text-xs text-gray-400 mt-1">
+            {uploadedTime}
+          </p>
+        )}
       </div>
 
       {/* ✅ Updated Remove Button (Icon + Text) */}

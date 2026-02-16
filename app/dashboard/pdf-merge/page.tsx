@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PDFDocument, PDFPage } from 'pdf-lib';
 import {
   DndContext,
@@ -24,6 +24,7 @@ import { FileUp, Trash2, Combine, FileText, Loader2 } from 'lucide-react';
 interface FileWithId {
   id: string;
   file: File;
+  uploadedAt: number; // ✅ ADDED
 }
 
 export default function PdfMergePage() {
@@ -31,6 +32,31 @@ export default function PdfMergePage() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [, forceUpdate] = useState(0); // ✅ For time refresh
+
+  /* ---------- Time Formatter ---------- */
+  const getRelativeTime = (timestamp: number) => {
+    const diff = Date.now() - timestamp;
+    const sec = Math.floor(diff / 1000);
+
+    if (sec < 5) return 'Uploaded just now';
+    if (sec < 60) return `Uploaded ${sec}s ago`;
+
+    const min = Math.floor(sec / 60);
+    if (min < 60) return `Uploaded ${min} min ago`;
+
+    const hr = Math.floor(min / 60);
+    return `Uploaded ${hr} hr ago`;
+  };
+
+  /* ---------- Auto Refresh Time Text ---------- */
+  useEffect(() => {
+    const interval = setInterval(() => {
+      forceUpdate((n) => n + 1);
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   /* ---------- Replace File ---------- */
   const replaceFile = (idToReplace: string, newFile: File) => {
@@ -38,7 +64,9 @@ export default function PdfMergePage() {
 
     setFilesWithIds((prev) =>
       prev.map((item) =>
-        item.id === idToReplace ? { ...item, file: newFile } : item
+        item.id === idToReplace
+          ? { ...item, file: newFile, uploadedAt: Date.now() } // ✅ update time
+          : item
       )
     );
   };
@@ -70,6 +98,7 @@ export default function PdfMergePage() {
     const newFiles = droppedFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
+      uploadedAt: Date.now(), // ✅ ADDED
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
@@ -85,6 +114,7 @@ export default function PdfMergePage() {
     const newFiles = selectedFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
+      uploadedAt: Date.now(), // ✅ ADDED
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
@@ -160,7 +190,6 @@ export default function PdfMergePage() {
 
   return (
     <div className="max-w-4xl mx-auto py-12 px-4 sm:px-6 lg:px-8">
-      {/* Hidden replace input */}
       <input
         type="file"
         accept="application/pdf"
@@ -178,9 +207,7 @@ export default function PdfMergePage() {
         <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-4">
           <Combine className="w-8 h-8" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">
-          Merge PDF Files
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-900">Merge PDF Files</h1>
         <p className="mt-2 text-lg text-gray-600">
           Combine multiple PDF documents into a single file. Reorder them as needed.
         </p>
@@ -200,7 +227,6 @@ export default function PdfMergePage() {
         </div>
       )}
 
-      {/* Upload Dropzone */}
       <div
         tabIndex={0}
         aria-label="Upload PDF files"
@@ -272,6 +298,7 @@ export default function PdfMergePage() {
                       id={item.id}
                       file={item.file}
                       index={index}
+                      uploadedTime={getRelativeTime(item.uploadedAt)} // ✅ PASS TIME
                       onRemove={() => removeFile(item.id)}
                     />
 
