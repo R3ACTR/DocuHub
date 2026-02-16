@@ -6,6 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import Tesseract from "tesseract.js";
 import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
 import { PDFDocument } from "pdf-lib";
+import { useRecentFiles } from "@/lib/hooks/useRecentFiles";
 
 type StoredFile = {
   data: string;
@@ -17,6 +18,7 @@ export default function ProcessingPage() {
   const router = useRouter();
   const params = useParams();
   const toolId = params.id as string;
+  const { addRecentFile } = useRecentFiles();
 
   const [status, setStatus] = useState<"processing" | "done" | "error">(
     "processing"
@@ -26,6 +28,7 @@ export default function ProcessingPage() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [processedFile, setProcessedFile] = useState<StoredFile | null>(null);
 
   /* ================= RUN TOOL ================= */
   useEffect(() => {
@@ -37,22 +40,28 @@ export default function ProcessingPage() {
         return;
       }
 
+      setProcessedFile(stored[0]); // Keep reference for recent files
+
       try {
-        if (toolId === "ocr") await runOCR(stored[0].data);
+        if (toolId === "ocr") await runOCR(stored[0]);
 
         else if (toolId === "pdf-protect")
-          await protectPDF(stored[0].data);
+          await protectPDF(stored[0]);
 
         else if (toolId === "jpeg-to-pdf")
-          await imageToPdf(stored[0].data, "jpg");
+          await imageToPdf(stored[0], "jpg");
 
         else if (toolId === "png-to-pdf")
-          await imageToPdf(stored[0].data, "png");
+          await imageToPdf(stored[0], "png");
 
         else if (toolId === "pdf-compress")
           await startCompressFlow(stored);
 
-        else setStatus("done");
+        else {
+          // Default success case
+          addToRecent(stored[0].name);
+          setStatus("done");
+        }
       } catch (e) {
         console.error(e);
         setError("Processing failed");
@@ -65,9 +74,17 @@ export default function ProcessingPage() {
     run();
   }, [toolId, router]);
 
+  const addToRecent = (fileName: string) => {
+    addRecentFile({
+      fileName,
+      tool: toolId,
+      time: new Date().toLocaleString(),
+    });
+  };
+
   /* ================= OCR ================= */
-  const runOCR = async (base64: string) => {
-    const res = await Tesseract.recognize(base64, "eng", {
+  const runOCR = async (file: StoredFile) => {
+    const res = await Tesseract.recognize(file.data, "eng", {
       logger: (m) => {
         if (m.status === "recognizing text") {
           setProgress(Math.round(m.progress * 100));
@@ -76,6 +93,7 @@ export default function ProcessingPage() {
     });
 
     setText(res.data.text);
+    addToRecent(file.name);
     setStatus("done");
   };
 
@@ -110,23 +128,27 @@ export default function ProcessingPage() {
     );
 
     setDownloadUrl(makeBlobUrl(bytes));
+    addToRecent(files[0].name); // Add the first file to recent
     setProgress(100);
     setStatus("done");
   };
 
+
+
   /* ================= PDF PROTECT ================= */
-  const protectPDF = async (base64: string) => {
-    const bytes = base64ToBytes(base64);
+  const protectPDF = async (file: StoredFile) => {
+    const bytes = base64ToBytes(file.data);
     const pdf = await PDFDocument.load(bytes);
     const saved = await pdf.save();
 
     setDownloadUrl(makeBlobUrl(saved));
+    addToRecent(file.name);
     setStatus("done");
   };
 
   /* ================= IMAGE → PDF ================= */
-  const imageToPdf = async (base64: string, type: "jpg" | "png") => {
-    const bytes = base64ToBytes(base64);
+  const imageToPdf = async (file: StoredFile, type: "jpg" | "png") => {
+    const bytes = base64ToBytes(file.data);
 
     const pdf = await PDFDocument.create();
     const img =
@@ -145,6 +167,7 @@ export default function ProcessingPage() {
 
     const saved = await pdf.save();
     setDownloadUrl(makeBlobUrl(saved));
+    addToRecent(file.name);
     setStatus("done");
   };
 
@@ -207,8 +230,8 @@ export default function ProcessingPage() {
           {toolId === "jpeg-to-pdf"
             ? "JPEG Converted to PDF!"
             : toolId === "png-to-pdf"
-            ? "PNG Converted to PDF!"
-            : "Completed Successfully"}
+              ? "PNG Converted to PDF!"
+              : "Completed Successfully"}
         </h2>
 
         {downloadUrl && (
