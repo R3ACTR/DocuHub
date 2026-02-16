@@ -21,6 +21,23 @@ import {
 } from "@/lib/toolStateStorage";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const UPLOAD_ENABLED_TOOLS = new Set([
+  "ocr",
+  "jpeg-to-pdf",
+  "png-to-pdf",
+  "pdf-protect",
+  "pdf-compress",
+  "pdf-watermark",
+  "pdf-page-numbers",
+]);
+const CATEGORY_TOOLS = new Set(["pdf-tools"]);
+const MOVED_TO_DASHBOARD: Record<string, string> = {
+  "pdf-merge": "/dashboard/pdf-merge",
+  "document-to-pdf": "/dashboard/document-to-pdf",
+  "pdf-split": "/dashboard/pdf-split",
+  "pdf-redact": "/dashboard/pdf-redact",
+  "metadata-viewer": "/dashboard/metadata-viewer",
+};
 
 export default function ToolUploadPage() {
   const router = useRouter();
@@ -101,13 +118,10 @@ export default function ToolUploadPage() {
         return [".jpg", ".jpeg"];
       case "png-to-pdf":
         return [".png"];
-      case "pdf-merge":
-      case "pdf-split":
       case "pdf-protect":
       case "pdf-compress":
       case "pdf-watermark":
       case "pdf-page-numbers":
-      case "pdf-rotate":
         return [".pdf"];
       default:
         return [];
@@ -220,7 +234,7 @@ export default function ToolUploadPage() {
   };
 
   /* Tools page */
-  if (toolId === "pdf-tools") {
+  if (CATEGORY_TOOLS.has(toolId)) {
     return (
       <div className="min-h-screen flex flex-col">
         <main className="container mx-auto px-6 py-12 md:px-12">
@@ -233,6 +247,43 @@ export default function ToolUploadPage() {
             ))}
           </div>
         </main>
+      </div>
+    );
+  }
+
+  const dashboardFallback = MOVED_TO_DASHBOARD[toolId];
+  if (!UPLOAD_ENABLED_TOOLS.has(toolId)) {
+    const heading = dashboardFallback
+      ? "This tool moved to Dashboard"
+      : "This tool is currently unavailable";
+    const details = dashboardFallback
+      ? "Use the dashboard route for this tool."
+      : "Choose an available tool to continue.";
+
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center border rounded-xl p-6">
+          <h1 className="text-2xl font-semibold">{heading}</h1>
+          <p className="text-muted-foreground mt-2">
+            {details} (Tool ID: {toolId})
+          </p>
+          <div className="mt-6 flex flex-col gap-3">
+            {dashboardFallback && (
+              <button
+                onClick={() => router.push(dashboardFallback)}
+                className="w-full py-3 rounded-lg text-sm font-medium bg-black text-white hover:bg-gray-800"
+              >
+                Open Tool
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-full py-3 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
