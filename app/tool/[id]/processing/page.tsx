@@ -67,6 +67,7 @@ export default function ProcessingPage() {
   const [text, setText] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedDownloadIndex, setCopiedDownloadIndex] = useState<number | null>(null);
 
   const [downloadItems, setDownloadItems] = useState<DownloadItem[]>([]);
   const [originalSize, setOriginalSize] = useState<number | null>(null);
@@ -941,6 +942,12 @@ export default function ProcessingPage() {
     setTimeout(() => setCopied(false), 1500);
   };
 
+  const copyDownloadUrl = async (item: DownloadItem, index: number) => {
+    await navigator.clipboard.writeText(item.url);
+    setCopiedDownloadIndex(index);
+    setTimeout(() => setCopiedDownloadIndex(null), 1500);
+  };
+
   if (status === "processing") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -983,13 +990,22 @@ export default function ProcessingPage() {
         </h2>
 
         {downloadItems.map((item, index) => (
-          <button
-            key={index}
-            onClick={() => download(item, index)}
-            className="block mx-auto mb-3 px-6 py-3 bg-black text-white rounded-lg"
-          >
-            Download {item.name}
-          </button>
+          <div key={index} className="mb-3">
+            <button
+              onClick={() => download(item, index)}
+              className="block mx-auto px-6 py-3 bg-black text-white rounded-lg"
+            >
+              Download {item.name}
+            </button>
+            {item.name.toLowerCase().endsWith(".pdf") && (
+              <button
+                onClick={() => copyDownloadUrl(item, index)}
+                className="block mx-auto mt-2 px-4 py-2 border rounded-lg text-sm"
+              >
+                {copiedDownloadIndex === index ? "Copied PDF URL!" : "Copy PDF URL"}
+              </button>
+            )}
+          </div>
         ))}
 
         {toolId === "pdf-compress" && originalSize && compressedSize && (

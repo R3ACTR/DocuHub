@@ -6,6 +6,7 @@ export type RecentFile = {
   fileName: string;
   tool: string;
   time: string;
+  link?: string;
 };
 
 export type DeletedFile = RecentFile & {
