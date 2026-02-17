@@ -32,6 +32,8 @@ export default function PdfMergePage() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [previewFileId, setPreviewFileId] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [, forceUpdate] = useState(0);
 
   const getRelativeTime = (timestamp: number) => {
@@ -54,6 +56,24 @@ export default function PdfMergePage() {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    if (!filesWithIds.length) {
+      setPreviewFileId(null);
+      setPreviewUrl(null);
+      return;
+    }
+
+    const currentPreviewId = previewFileId ?? filesWithIds[0].id;
+    const currentItem = filesWithIds.find((item) => item.id === currentPreviewId) || filesWithIds[0];
+    const objectUrl = URL.createObjectURL(currentItem.file);
+    setPreviewFileId(currentItem.id);
+    setPreviewUrl(objectUrl);
+
+    return () => {
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [filesWithIds, previewFileId]);
 
   const replaceFile = (idToReplace: string, newFile: File) => {
     if (newFile.type !== 'application/pdf') return;
@@ -119,6 +139,14 @@ export default function PdfMergePage() {
 
   const removeFile = (idToRemove: string) => {
     setFilesWithIds((prev) => prev.filter((item) => item.id !== idToRemove));
+  };
+
+  const handleReplacePreviewFile = () => {
+    if (!previewFileId) return;
+    const input = document.getElementById('replace-file-input') as HTMLInputElement | null;
+    if (!input) return;
+    input.setAttribute('data-replace-id', previewFileId);
+    input.click();
   };
 
   const clearAll = () => {
@@ -284,6 +312,54 @@ export default function PdfMergePage() {
             </SortableContext>
           </DndContext>
 
+          <div className="rounded-2xl border border-gray-200 bg-white p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Preview Before Merge</h3>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleReplacePreviewFile}
+                  disabled={!previewFileId}
+                  className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Replace Selected
+                </button>
+                <button
+                  type="button"
+                  onClick={clearAll}
+                  className="px-3 py-2 text-sm rounded-lg border border-red-200 text-red-600 hover:bg-red-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              {filesWithIds.map((item) => (
+                <button
+                  key={`preview-${item.id}`}
+                  type="button"
+                  onClick={() => setPreviewFileId(item.id)}
+                  className={`px-3 py-1.5 text-xs rounded-full border ${
+                    previewFileId === item.id
+                      ? 'border-indigo-600 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-300 text-gray-600 hover:bg-gray-50'
+                  }`}
+                >
+                  {item.file.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="rounded-xl border border-gray-200 overflow-hidden">
+              {previewUrl ? (
+                <iframe src={previewUrl} title="PDF preview before merge" className="w-full h-[460px]" />
+              ) : (
+                <div className="p-6 text-sm text-gray-600">Select a PDF to preview.</div>
+              )}
+            </div>
+          </div>
+
           <div className="pt-6 flex justify-center">
             <button
               onClick={handleMerge}
@@ -298,7 +374,7 @@ export default function PdfMergePage() {
               ) : (
                 <>
                   <Combine className="w-5 h-5" />
-                  Merge PDFs
+                  Confirm & Continue
                 </>
               )}
             </button>

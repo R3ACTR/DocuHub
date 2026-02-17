@@ -104,6 +104,10 @@ export default function ToolUploadPage() {
     : (params.id as string);
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewText, setPreviewText] = useState("");
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [fileError, setFileError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
@@ -140,6 +144,45 @@ export default function ToolUploadPage() {
       fileMeta: { name: file.name, size: file.size, type: file.type },
     });
   }, [toolId, selectedFiles]);
+
+  useEffect(() => {
+    const file = selectedFiles[previewIndex];
+    if (!file) {
+      setPreviewUrl(null);
+      setPreviewText("");
+      setIsPreviewLoading(false);
+      return;
+    }
+
+    let disposed = false;
+    let objectUrl: string | null = null;
+    const category = getFileCategory(file);
+
+    setIsPreviewLoading(true);
+    setPreviewText("");
+    setPreviewUrl(null);
+
+    const loadPreview = async () => {
+      try {
+        if (category === "pdf" || category === "image") {
+          objectUrl = URL.createObjectURL(file);
+          if (!disposed) setPreviewUrl(objectUrl);
+        } else if (category === "text") {
+          const text = await file.text();
+          if (!disposed) setPreviewText(text.slice(0, 8000));
+        }
+      } finally {
+        if (!disposed) setIsPreviewLoading(false);
+      }
+    };
+
+    loadPreview();
+
+    return () => {
+      disposed = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [selectedFiles, previewIndex]);
 
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
@@ -243,6 +286,25 @@ export default function ToolUploadPage() {
     }
   };
 
+  const getFileCategory = (file: File): "pdf" | "image" | "text" | "other" => {
+    if (file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")) {
+      return "pdf";
+    }
+    if (file.type.startsWith("image/")) {
+      return "image";
+    }
+    if (file.type.startsWith("text/")) {
+      return "text";
+    }
+    return "other";
+  };
+
+  const formatFileSize = (size: number) => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+    return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+  };
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     clearStoredFiles();
 
@@ -276,7 +338,34 @@ export default function ToolUploadPage() {
 
     setFileError(null);
     setSelectedFiles(validFiles);
+    setPreviewIndex(0);
     setHasUnsavedWork(true);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => {
+      const next = prev.filter((_, currentIndex) => currentIndex !== index);
+
+      if (!next.length) {
+        setPreviewIndex(0);
+        setHasUnsavedWork(false);
+      } else if (previewIndex >= next.length) {
+        setPreviewIndex(next.length - 1);
+      }
+
+      return next;
+    });
+  };
+
+  const handleCancelSelection = () => {
+    setSelectedFiles([]);
+    setPreviewIndex(0);
+    setFileError(null);
+    setHasUnsavedWork(false);
+    clearStoredFiles();
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleProcessFile = async () => {
@@ -367,6 +456,15 @@ export default function ToolUploadPage() {
     }
     router.push("/dashboard");
   };
+
+  const canProcess =
+    selectedFiles.length > 0 &&
+    !isProcessing &&
+    !(toolId === "pdf-protect" && !protectPassword.trim()) &&
+    !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&
+    !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&
+    !(toolId === "pdf-watermark" && !watermarkText.trim()) &&
+    !(toolId === "pdf-password-remover" && !passwordRemoverPassword.trim());
 
   if (CATEGORY_TOOLS.has(toolId)) {
     const categoryConfig =
@@ -720,28 +818,108 @@ export default function ToolUploadPage() {
           </div>
         )}
 
-        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
+        {selectedFiles.length > 0 && (
+          <div className="mt-8 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">File Preview</h2>
+              <button
+                type="button"
+                onClick={handleCancelSelection}
+                className="text-sm text-gray-600 hover:text-black"
+              >
+                Cancel
+              </button>
+            </div>
 
-        <button
-          onClick={handleProcessFile}
-          disabled={
-            !selectedFiles.length ||
-            isProcessing ||
-            (toolId === "pdf-protect" && !protectPassword.trim()) ||
-            (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||
-            (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) ||
-            (toolId === "pdf-watermark" && !watermarkText.trim()) ||
-            (toolId === "pdf-password-remover" &&
-              !passwordRemoverPassword.trim())
-          }
-          className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${
-            selectedFiles.length && !isProcessing
-              ? "bg-black text-white hover:bg-gray-800"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
-        >
-          {isProcessing ? "Processing..." : "Process File"}
-        </button>
+            <div className="space-y-2">
+              {selectedFiles.map((file, index) => (
+                <div
+                  key={`${file.name}-${file.size}-${file.lastModified}`}
+                  className={`flex items-center justify-between rounded-lg border px-3 py-2 ${
+                    index === previewIndex ? "border-black bg-gray-50" : "border-gray-200"
+                  }`}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setPreviewIndex(index)}
+                    className="text-left min-w-0 flex-1"
+                  >
+                    <p className="truncate text-sm font-medium">{file.name}</p>
+                    <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveFile(index)}
+                    className="ml-3 text-xs text-red-600 hover:text-red-700"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">
+              {isPreviewLoading ? (
+                <div className="p-6 text-sm text-gray-600">Loading preview...</div>
+              ) : selectedFiles[previewIndex] &&
+                getFileCategory(selectedFiles[previewIndex]) === "pdf" &&
+                previewUrl ? (
+                <iframe src={previewUrl} title="PDF preview" className="w-full h-[420px]" />
+              ) : selectedFiles[previewIndex] &&
+                getFileCategory(selectedFiles[previewIndex]) === "image" &&
+                previewUrl ? (
+                <div className="p-4 flex justify-center bg-gray-50">
+                  <img
+                    src={previewUrl}
+                    alt="Selected file preview"
+                    className="max-h-[420px] w-auto object-contain"
+                  />
+                </div>
+              ) : selectedFiles[previewIndex] &&
+                getFileCategory(selectedFiles[previewIndex]) === "text" ? (
+                <pre className="p-4 text-xs whitespace-pre-wrap break-words max-h-[420px] overflow-auto">
+                  {previewText || "No text content available."}
+                </pre>
+              ) : (
+                <div className="p-6 text-sm text-gray-600">
+                  Preview is not available for this file type.
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-gray-500">
+              Verify your files before processing. You can replace, remove, or cancel.
+            </p>
+
+            {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"
+              >
+                Replace File
+              </button>
+              <button
+                type="button"
+                onClick={handleProcessFile}
+                disabled={!canProcess}
+                className={`w-full sm:flex-1 py-3 rounded-lg text-sm font-medium transition ${
+                  canProcess
+                    ? "bg-black text-white hover:bg-gray-800"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                {isProcessing ? "Processing..." : "Confirm & Continue"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!selectedFiles.length && fileError && (
+          <p className="mt-3 text-sm text-red-600">{fileError}</p>
+        )}
       </main>
     </div>
   );
