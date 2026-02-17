@@ -1,9 +1,9 @@
-"use client";                                                                                                                                                 
+"use client";
                                                                                                                                                                 
   import {                                                                                                                                                      
     ArrowLeft,                                                                                                                                                  
     Upload,                                                                                                                                                     
-    FileText,
+    FileText,                                                                                                                                                   
     Image as ImageIcon,                                                                                                                                         
     ArrowLeftRight,                                                                                                                                             
     ScanText,                                                                                                                                                   
@@ -32,7 +32,7 @@
     "pdf-redact",                                                                                                                                               
     "metadata-viewer",                                                                                                                                          
     "pdf-extract-images",                                                                                                                                       
-    "pdf-delete-pages",                                                                                                                                         
+    "pdf-delete-pages",
     "pdf-page-reorder",                                                                                                                                         
     "pdf-password-remover",                                                                                                                                     
     "pdf-page-numbers",                                                                                                                                         
@@ -40,7 +40,8 @@
   ]);                                                                                                                                                           
                                                                                                                                                                 
   const CATEGORY_TOOLS = new Set(["pdf-tools", "file-conversion", "data-tools"]);                                                                               
-  const FILE_CONVERSION_TOOLS = Object.freeze([                                                                                                                 
+                                                                                                                                                                
+  const FILE_CONVERSION_TOOLS = Object.freeze([
     {                                                                                                                                                           
       id: "document-to-pdf",                                                                                                                                    
       title: "Document to PDF",                                                                                                                                 
@@ -63,6 +64,7 @@
       icon: ImageIcon,                                                                                                                                          
     },                                                                                                                                                          
   ]);                                                                                                                                                           
+                                                                                                                                                                
   const DATA_TOOLS = Object.freeze([                                                                                                                            
     {                                                                                                                                                           
       id: "ocr",                                                                                                                                                
@@ -85,7 +87,7 @@
       href: "/tool/pdf-redact",                                                                                                                                 
       icon: Shield,                                                                                                                                             
     },                                                                                                                                                          
-  ]);                                                                                                                                                           
+  ]);
                                                                                                                                                                 
   const MOVED_TO_DASHBOARD: Record<string, string> = {                                                                                                          
     "pdf-merge": "/dashboard/pdf-merge",                                                                                                                        
@@ -102,6 +104,10 @@
       : (params.id as string);                                                                                                                                  
                                                                                                                                                                 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);                                                                                             
+    const [previewIndex, setPreviewIndex] = useState(0);                                                                                                        
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);                                                                                          
+    const [previewText, setPreviewText] = useState("");                                                                                                         
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);                                                                                            
     const [fileError, setFileError] = useState<string | null>(null);                                                                                            
     const [isProcessing, setIsProcessing] = useState(false);                                                                                                    
     const [hasUnsavedWork, setHasUnsavedWork] = useState(false);                                                                                                
@@ -112,7 +118,6 @@
     const [compressionLevel, setCompressionLevel] = useState<                                                                                                   
       "low" | "medium" | "high"                                                                                                                                 
     >("medium");                                                                                                                                                
-                                                                                                                                                                
     const [compressionTargetBytesInput, setCompressionTargetBytesInput] =                                                                                       
       useState("");                                                                                                                                             
                                                                                                                                                                 
@@ -133,11 +138,50 @@
     useEffect(() => {                                                                                                                                           
       if (!toolId || !selectedFiles.length) return;                                                                                                             
                                                                                                                                                                 
-      const file = selectedFiles[0];                                                                                                                            
+      const file = selectedFiles[0];
       saveToolState(toolId, {                                                                                                                                   
         fileMeta: { name: file.name, size: file.size, type: file.type },                                                                                        
-      });                                                                                                                                                       
+      });
     }, [toolId, selectedFiles]);                                                                                                                                
+                                                                                                                                                                
+    useEffect(() => {                                                                                                                                           
+      const file = selectedFiles[previewIndex];                                                                                                                 
+      if (!file) {                                                                                                                                              
+        setPreviewUrl(null);                                                                                                                                    
+        setPreviewText("");                                                                                                                                     
+        setIsPreviewLoading(false);                                                                                                                             
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+                                                                                                                                                                
+      let disposed = false;                                                                                                                                     
+      let objectUrl: string | null = null;                                                                                                                      
+      const category = getFileCategory(file);                                                                                                                   
+                                                                                                                                                                
+      setIsPreviewLoading(true);                                                                                                                                
+      setPreviewText("");                                                                                                                                       
+      setPreviewUrl(null);                                                                                                                                      
+                                                                                                                                                                
+      const loadPreview = async () => {
+        try {                                                                                                                                                   
+          if (category === "pdf" || category === "image") {                                                                                                     
+            objectUrl = URL.createObjectURL(file);                                                                                                              
+            if (!disposed) setPreviewUrl(objectUrl);                                                                                                            
+          } else if (category === "text") {                                                                                                                     
+            const text = await file.text();                                                                                                                     
+            if (!disposed) setPreviewText(text.slice(0, 8000));                                                                                                 
+          }                                                                                                                                                     
+        } finally {                                                                                                                                             
+          if (!disposed) setIsPreviewLoading(false);                                                                                                            
+        }                                                                                                                                                       
+      };
+                                                                                                                                                                
+      loadPreview();                                                                                                                                            
+                                                                                                                                                                
+      return () => {                                                                                                                                            
+        disposed = true;                                                                                                                                        
+        if (objectUrl) URL.revokeObjectURL(objectUrl);                                                                                                          
+      };                                                                                                                                                        
+    }, [selectedFiles, previewIndex]);                                                                                                                          
                                                                                                                                                                 
     useEffect(() => {                                                                                                                                           
       const handler = (e: BeforeUnloadEvent) => {                                                                                                               
@@ -148,8 +192,8 @@
       window.addEventListener("beforeunload", handler);                                                                                                         
       return () => window.removeEventListener("beforeunload", handler);                                                                                         
     }, [hasUnsavedWork]);                                                                                                                                       
-
-    useEffect(() => {
+                                                                                                                                                                
+    useEffect(() => {                                                                                                                                           
       if (!toolId) return;                                                                                                                                      
                                                                                                                                                                 
       if (toolId === "pdf-compress") {                                                                                                                          
@@ -160,7 +204,7 @@
           savedLevel === "high"                                                                                                                                 
         ) {                                                                                                                                                     
           setCompressionLevel(savedLevel);                                                                                                                      
-        }                                                                                                                                                       
+        }
                                                                                                                                                                 
         const savedTarget =                                                                                                                                     
           localStorage.getItem("compressionTargetBytes") ||                                                                                                     
@@ -182,7 +226,7 @@
         return;                                                                                                                                                 
       }                                                                                                                                                         
 
-      if (toolId === "pdf-page-reorder") {                                                                                                                      
+      if (toolId === "pdf-page-reorder") {
         setReorderPagesInput(localStorage.getItem("pdfReorderPages") || "");                                                                                    
         return;                                                                                                                                                 
       }                                                                                                                                                         
@@ -205,7 +249,7 @@
                                                                                                                                                                 
         const savedFontSize = Number.parseInt(                                                                                                                  
           localStorage.getItem("pageNumberFontSize") || "14",                                                                                                   
-          10,                                                                                                                                                   
+          10,
         );                                                                                                                                                      
         if (Number.isFinite(savedFontSize) && savedFontSize > 0) {                                                                                              
           setPageNumberFontSize(savedFontSize);                                                                                                                 
@@ -232,7 +276,7 @@
       }                                                                                                                                                         
     }, [toolId]);                                                                                                                                               
                                                                                                                                                                 
-    const getSupportedTypes = () => {
+    const getSupportedTypes = () => {                                                                                                                           
       switch (toolId) {                                                                                                                                         
         case "ocr":                                                                                                                                             
           return [".jpg", ".jpeg", ".png"];                                                                                                                     
@@ -323,10 +367,7 @@
                                                                                                                                                                 
       if (toolId === "pdf-compress") {                                                                                                                          
         localStorage.setItem("compressionLevel", compressionLevel);                                                                                             
-        const parsedTarget = Number.parseInt(                                                                                                                   
-          compressionTargetBytesInput.trim(),                                                                                                                   
-          10,                                                                                                                                                   
-        );                                                                                                                                                      
+        const parsedTarget = Number.parseInt(compressionTargetBytesInput.trim(), 10);                                                                           
         if (Number.isFinite(parsedTarget) && parsedTarget > 0) {                                                                                                
           localStorage.setItem("compressionTargetBytes", String(parsedTarget));                                                                                 
           localStorage.setItem("targetBytes", String(parsedTarget));                                                                                            
@@ -334,7 +375,7 @@
           localStorage.removeItem("compressionTargetBytes");                                                                                                    
           localStorage.removeItem("targetBytes");                                                                                                               
         }                                                                                                                                                       
-      }                                                                                                                                                         
+      }
                                                                                                                                                                 
       if (toolId === "pdf-watermark") {                                                                                                                         
         localStorage.setItem("watermarkText", watermarkText.trim());                                                                                            
@@ -401,7 +442,16 @@
       }                                                                                                                                                         
       router.push("/dashboard");                                                                                                                                
     };                                                                                                                                                          
-
+                                                                                                                                                                
+    const canProcess =                                                                                                                                          
+      selectedFiles.length > 0 &&                                                                                                                               
+      !isProcessing &&                                                                                                                                          
+      !(toolId === "pdf-protect" && !protectPassword.trim()) &&                                                                                                 
+      !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&                                                                                           
+      !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&                                                                                          
+      !(toolId === "pdf-watermark" && !watermarkText.trim()) &&                                                                                                 
+      !(toolId === "pdf-password-remover" && !passwordRemoverPassword.trim());                                                                                  
+                                                                                                                                                                
     if (CATEGORY_TOOLS.has(toolId)) {                                                                                                                           
       const categoryConfig =                                                                                                                                    
         toolId === "pdf-tools"                                                                                                                                  
@@ -432,9 +482,7 @@
               <categoryConfig.icon className="w-7 h-7 text-primary" />                                                                                          
               <h1 className="text-3xl font-semibold">{categoryConfig.title}</h1>                                                                                
             </div>                                                                                                                                              
-            <p className="text-muted-foreground mb-12">                                                                                                         
-              {categoryConfig.subtitle}                                                                                                                         
-            </p>                                                                                                                                                
+            <p className="text-muted-foreground mb-12">{categoryConfig.subtitle}</p>                                                                            
                                                                                                                                                                 
             <div className="grid gap-6 md:grid-cols-2 max-w-5xl">                                                                                               
               {categoryConfig.tools.map((tool) => (                                                                                                             
@@ -442,7 +490,7 @@
               ))}                                                                                                                                               
             </div>                                                                                                                                              
           </main>                                                                                                                                               
-        </div>
+        </div>                                                                                                                                                  
       );                                                                                                                                                        
     }                                                                                                                                                           
                                                                                                                                                                 
@@ -455,7 +503,7 @@
         ? "Use the dashboard route for this tool."                                                                                                              
         : "Choose an available tool to continue.";                                                                                                              
                                                                                                                                                                 
-      return (
+      return (                                                                                                                                                  
         <div className="min-h-screen flex items-center justify-center px-6">                                                                                    
           <div className="max-w-md w-full text-center border rounded-xl p-6">                                                                                   
             <h1 className="text-2xl font-semibold">{heading}</h1>                                                                                               
@@ -466,14 +514,14 @@
               {dashboardFallback && (                                                                                                                           
                 <button                                                                                                                                         
                   onClick={() => router.push(dashboardFallback)}                                                                                                
-                  className="w-full py-3 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90"                                                  
+                  className="w-full py-3 rounded-lg text-sm font-medium bg-black text-white hover:bg-gray-800"                                                  
                 >                                                                                                                                               
                   Open Tool                                                                                                                                     
                 </button>                                                                                                                                       
               )}                                                                                                                                                
               <button                                                                                                                                           
                 onClick={() => router.push("/dashboard")}                                                                                                       
-                className="w-full py-3 rounded-lg text-sm font-medium border border-border hover:bg-muted"                                                  
+                className="w-full py-3 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"                                                  
               >                                                                                                                                                 
                 Back to Dashboard                                                                                                                               
               </button>                                                                                                                                         
@@ -489,7 +537,7 @@
           <button                                                                                                                                               
             onClick={handleBackNavigation}                                                                                                                      
             className="inline-flex items-center gap-2 text-sm mb-6"                                                                                             
-          >                                                                                                                                                     
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard                                                                                                 
           </button>                                                                                                                                             
                                                                                                                                                                 
@@ -497,7 +545,7 @@
                                                                                                                                                                 
           <motion.div                                                                                                                                           
             onClick={() => fileInputRef.current?.click()}                                                                                                       
-            className="border-2 border-dashed rounded-xl p-20 text-center cursor-pointer hover:border-accent hover:bg-muted"                                
+            className="border-2 border-dashed rounded-xl p-20 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50"                                
           >                                                                                                                                                     
             <Upload className="mx-auto mb-4" />                                                                                                                 
             <p>                                                                                                                                                 
@@ -516,10 +564,10 @@
             />                                                                                                                                                  
           </motion.div>                                                                                                                                         
                                                                                                                                                                 
-          <p className="text-sm text-muted-foreground mt-2">Maximum 10 files allowed</p>                                                                                
+          <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>                                                                                
                                                                                                                                                                 
           {toolId === "pdf-compress" && (                                                                                                                       
-            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
                   Compression Level                                                                                                                             
@@ -527,14 +575,14 @@
                 <select                                                                                                                                         
                   value={compressionLevel}                                                                                                                      
                   onChange={(e) =>                                                                                                                              
-                    setCompressionLevel(e.target.value as "low" | "medium" | "high")
+                    setCompressionLevel(e.target.value as "low" | "medium" | "high")                                                                            
                   }                                                                                                                                             
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="low">Low (higher quality)</option>                                                                                             
                   <option value="medium">Medium</option>                                                                                                        
                   <option value="high">High (smaller size)</option>                                                                                             
-                </select>
+                </select>                                                                                                                                       
               </div>                                                                                                                                            
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
@@ -547,9 +595,9 @@
                   value={compressionTargetBytesInput}                                                                                                           
                   onChange={(e) => setCompressionTargetBytesInput(e.target.value)}                                                                              
                   placeholder="Optional, e.g. 500000"                                                                                                           
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
-                <p className="mt-1 text-xs text-muted-foreground">                                                                                                      
+                <p className="mt-1 text-xs text-gray-500">                                                                                                      
                   Optional. If set, we try to reach this size and report when not possible.                                                                     
                 </p>                                                                                                                                            
               </div>                                                                                                                                            
@@ -557,7 +605,7 @@
           )}                                                                                                                                                    
                                                                                                                                                                 
           {(toolId === "pdf-protect" || toolId === "pdf-password-remover") && (                                                                                 
-            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Password</label>                                                                                
               <input                                                                                                                                            
                 type="password"                                                                                                                                 
@@ -570,23 +618,23 @@
                     : setPasswordRemoverPassword(e.target.value)                                                                                                
                 }                                                                                                                                               
                 placeholder="Enter password"                                                                                                                    
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-watermark" && (                                                                                                                      
-            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
+                <label className="block text-sm font-medium mb-2">
                   Watermark Text                                                                                                                                
                 </label>                                                                                                                                        
                 <input                                                                                                                                          
-                  type="text"
+                  type="text"                                                                                                                                   
                   value={watermarkText}                                                                                                                         
                   onChange={(e) => setWatermarkText(e.target.value)}                                                                                            
                   placeholder="Confidential"                                                                                                                    
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
               </div>                                                                                                                                            
               <div>                                                                                                                                             
@@ -599,7 +647,7 @@
                   max={180}                                                                                                                                     
                   step={1}                                                                                                                                      
                   value={rotationAngle}                                                                                                                         
-                  onChange={(e) => setRotationAngle(Number(e.target.value))}                                                                                    
+                  onChange={(e) => setRotationAngle(Number(e.target.value))}
                   className="w-full"                                                                                                                            
                 />                                                                                                                                              
               </div>                                                                                                                                            
@@ -612,7 +660,7 @@
                   min={5}                                                                                                                                       
                   max={100}                                                                                                                                     
                   step={1}                                                                                                                                      
-                  value={opacity}                                                                                                                               
+                  value={opacity}
                   onChange={(e) => setOpacity(Number(e.target.value))}                                                                                          
                   className="w-full"                                                                                                                            
                 />                                                                                                                                              
@@ -621,69 +669,65 @@
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-delete-pages" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Pages to Delete</label>                                                                         
               <input                                                                                                                                            
                 type="text"                                                                                                                                     
                 value={deletePagesInput}                                                                                                                        
                 onChange={(e) => setDeletePagesInput(e.target.value)}                                                                                           
                 placeholder="e.g. 2,4-6"                                                                                                                        
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
-              />                                                                                                                                                
-              <p className="mt-1 text-xs text-muted-foreground">                                                                                                        
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+              />
+              <p className="mt-1 text-xs text-gray-500">                                                                                                        
                 Use comma-separated pages or ranges.                                                                                                            
               </p>                                                                                                                                              
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-page-reorder" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">New Page Order</label>                                                                          
               <input                                                                                                                                            
                 type="text"                                                                                                                                     
                 value={reorderPagesInput}                                                                                                                       
                 onChange={(e) => setReorderPagesInput(e.target.value)}                                                                                          
                 placeholder="e.g. 3,1,2"                                                                                                                        
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
-              <p className="mt-1 text-xs text-muted-foreground">                                                                                                        
-                Provide each page exactly once.                                                                                                                 
-              </p>                                                                                                                                              
+              <p className="mt-1 text-xs text-gray-500">Provide each page exactly once.</p>                                                                     
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-extract-images" && (                                                                                                                 
-            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Export Format</label>                                                                           
               <select                                                                                                                                           
                 value={extractImageFormat}                                                                                                                      
                 onChange={(e) =>                                                                                                                                
                   setExtractImageFormat(e.target.value === "jpg" ? "jpg" : "png")                                                                               
                 }                                                                                                                                               
-                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
-              >
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+              >                                                                                                                                                 
                 <option value="png">PNG</option>                                                                                                                
                 <option value="jpg">JPG</option>                                                                                                                
               </select>                                                                                                                                         
             </div>                                                                                                                                              
-          )}
+          )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-page-numbers" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
-                  Number Format                                                                                                                                 
-                </label>                                                                                                                                        
+                <label className="block text-sm font-medium mb-2">Number Format</label>                                                                         
                 <select                                                                                                                                         
                   value={pageNumberFormat}                                                                                                                      
                   onChange={(e) => setPageNumberFormat(e.target.value)}                                                                                         
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="numeric">1, 2, 3</option>                                                                                                      
                   <option value="Roman">I, II, III</option>                                                                                                     
                   <option value="letter">A, B, C</option>                                                                                                       
                 </select>                                                                                                                                       
-              </div>                                                                                                                                            
+              </div>
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">Font Size</label>                                                                             
                 <input                                                                                                                                          
@@ -697,27 +741,25 @@
                       setPageNumberFontSize(Math.min(72, Math.max(8, next)));                                                                                   
                     }                                                                                                                                           
                   }}                                                                                                                                            
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
-              </div>                                                                                                                                            
+              </div>
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-rotate" && (                                                                                                                         
-            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
-                  Rotation Angle                                                                                                                                
-                </label>                                                                                                                                        
+                <label className="block text-sm font-medium mb-2">Rotation Angle</label>                                                                        
                 <select                                                                                                                                         
                   value={String(rotateConfig.angle)}                                                                                                            
-                  onChange={(e) =>
+                  onChange={(e) =>                                                                                                                              
                     setRotateConfig((prev) => ({                                                                                                                
                       ...prev,                                                                                                                                  
                       angle: Number(e.target.value),                                                                                                            
-                    }))                                                                                                                                         
+                    }))
                   }                                                                                                                                             
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="90">90 degrees</option>                                                                                                        
                   <option value="180">180 degrees</option>                                                                                                      
@@ -735,36 +777,115 @@
                     setRotateConfig((prev) => ({ ...prev, pages: e.target.value }))                                                                             
                   }                                                                                                                                             
                   placeholder="Leave blank for all pages (e.g. 1,3-5)"                                                                                          
-                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
               </div>                                                                                                                                            
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
-          {fileError && <p className="mt-3 text-sm text-danger">{fileError}</p>}                                                                               
+          {selectedFiles.length > 0 && (                                                                                                                        
+            <div className="mt-8 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
+              <div className="flex items-center justify-between">                                                                                               
+                <h2 className="text-lg font-semibold">File Preview</h2>                                                                                         
+                <button                                                                                                                                         
+                  type="button"                                                                                                                                 
+                  onClick={handleCancelSelection}                                                                                                               
+                  className="text-sm text-gray-600 hover:text-black"                                                                                            
+                >                                                                                                                                               
+                  Cancel                                                                                                                                        
+                </button>                                                                                                                                       
+              </div>                                                                                                                                            
                                                                                                                                                                 
-          <button                                                                                                                                               
-            onClick={handleProcessFile}                                                                                                                         
-            disabled={                                                                                                                                          
-              !selectedFiles.length ||                                                                                                                          
-              isProcessing ||                                                                                                                                   
-              (toolId === "pdf-protect" && !protectPassword.trim()) ||                                                                                          
-              (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||                                                                                    
-              (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) ||                                                                                   
-              (toolId === "pdf-watermark" && !watermarkText.trim()) ||                                                                                          
-              (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                            
-            }                                                                                                                                                   
-            className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${                                                                           
-              selectedFiles.length && !isProcessing                                                                                                             
-                ? "bg-primary text-primary-foreground hover:opacity-90"                                                                                                       
-                : "bg-muted text-muted-foreground cursor-not-allowed"                                                                                                
-            }`}                                                                                                                                                 
-          >                                                                                                                                                     
-            {isProcessing ? "Processing..." : "Process File"}                                                                                                   
-          </button>                                                                                                                                             
+              <div className="space-y-2">                                                                                                                       
+                {selectedFiles.map((file, index) => (                                                                                                           
+                  <div                                                                                                                                          
+                    key={`${file.name}-${file.size}-${file.lastModified}`}                                                                                      
+                    className={`flex items-center justify-between rounded-lg border px-3 py-2 ${                                                                
+                      index === previewIndex ? "border-black bg-gray-50" : "border-gray-200"                                                                    
+                    }`}                                                                                                                                         
+                  >                                                                                                                                             
+                    <button                                                                                                                                     
+                      type="button"                                                                                                                             
+                      onClick={() => setPreviewIndex(index)}                                                                                                    
+                      className="text-left min-w-0 flex-1"                                                                                                      
+                    >                                                                                                                                           
+                      <p className="truncate text-sm font-medium">{file.name}</p>                                                                               
+                      <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>                                                                      
+                    </button>                                                                                                                                   
+                    <button                                                                                                                                     
+                      type="button"                                                                                                                             
+                      onClick={() => handleRemoveFile(index)}                                                                                                   
+                      className="ml-3 text-xs text-red-600 hover:text-red-700"                                                                                  
+                    >                                                                                                                                           
+                      Remove                                                                                                                                    
+                    </button>                                                                                                                                   
+                  </div>                                                                                                                                        
+                ))}                                                                                                                                             
+              </div>                                                                                                                                            
+                                                                                                                                                                
+              <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">                                                                      
+                {isPreviewLoading ? (                                                                                                                           
+                  <div className="p-6 text-sm text-gray-600">Loading preview...</div>                                                                           
+                ) : selectedFiles[previewIndex] &&                                                                                                              
+                  getFileCategory(selectedFiles[previewIndex]) === "pdf" &&                                                                                     
+                  previewUrl ? (                                                                                                                                
+                  <iframe src={previewUrl} title="PDF preview" className="w-full h-[420px]" />                                                                  
+                ) : selectedFiles[previewIndex] &&                                                                                                              
+                  getFileCategory(selectedFiles[previewIndex]) === "image" &&                                                                                   
+                  previewUrl ? (                                                                                                                                
+                  <div className="p-4 flex justify-center bg-gray-50">                                                                                          
+                    <img                                                                                                                                        
+                      src={previewUrl}                                                                                                                          
+                      alt="Selected file preview"                                                                                                               
+                      className="max-h-[420px] w-auto object-contain"                                                                                           
+                    />                                                                                                                                          
+                  </div>                                                                                                                                        
+                ) : selectedFiles[previewIndex] &&                                                                                                              
+                  getFileCategory(selectedFiles[previewIndex]) === "text" ? (                                                                                   
+                  <pre className="p-4 text-xs whitespace-pre-wrap break-words max-h-[420px] overflow-auto">                                                     
+                    {previewText || "No text content available."}                                                                                               
+                  </pre>                                                                                                                                        
+                ) : (                                                                                                                                           
+                  <div className="p-6 text-sm text-gray-600">                                                                                                   
+                    Preview is not available for this file type.                                                                                                
+                  </div>                                                                                                                                        
+                )}                                                                                                                                              
+              </div>                                                                                                                                            
+                                                                                                                                                                
+              <p className="text-xs text-gray-500">                                                                                                             
+                Verify your files before processing. You can replace, remove, or cancel.                                                                        
+              </p>                                                                                                                                              
+                                                                                                                                                                
+              {fileError && <p className="text-sm text-red-600">{fileError}</p>}                                                                                
+                                                                                                                                                                
+              <div className="flex flex-col gap-3 sm:flex-row">                                                                                                 
+                <button                                                                                                                                         
+                  type="button"                                                                                                                                 
+                  onClick={() => fileInputRef.current?.click()}                                                                                                 
+                  className="w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"                                 
+                >                                                                                                                                               
+                  Replace File                                                                                                                                  
+                </button>                                                                                                                                       
+                <button                                                                                                                                         
+                  type="button"                                                                                                                                 
+                  onClick={handleProcessFile}                                                                                                                   
+                  disabled={!canProcess}                                                                                                                        
+                  className={`w-full sm:flex-1 py-3 rounded-lg text-sm font-medium transition ${                                                                
+                    canProcess                                                                                                                                  
+                      ? "bg-black text-white hover:bg-gray-800"                                                                                                 
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"                                                                                          
+                  }`}                                                                                                                                           
+                >                                                                                                                                               
+                  {isProcessing ? "Processing..." : "Confirm & Continue"}                                                                                       
+                </button>                                                                                                                                       
+              </div>                                                                                                                                            
+            </div>                                                                                                                                              
+          )}                                                                                                                                                    
+                                                                                                                                                                
+          {!selectedFiles.length && fileError && (                                                                                                              
+            <p className="mt-3 text-sm text-red-600">{fileError}</p>                                                                                            
+          )}                                                                                                                                                    
         </main>                                                                                                                                                 
       </div>                                                                                                                                                    
     );                                                                                                                                                          
-  }                                                                                                                                                             
- 
-
+  } 
