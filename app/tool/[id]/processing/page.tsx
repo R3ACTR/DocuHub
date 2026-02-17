@@ -7,6 +7,7 @@ import Tesseract from "tesseract.js";
 import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
 import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { protectPdfBytes } from "@/lib/pdfProtection";
+import { scanBytesForThreat } from "@/lib/security/virusScan";
 import ToolFeedbackPrompt from "@/components/ToolFeedbackPrompt";
 
 type StoredFile = {
@@ -682,24 +683,32 @@ export default function ProcessingPage() {
   };
 
   const readRawBytes = async (file: StoredFile) => {
+    let bytes: Uint8Array;
+
     if (file.file) {
-      return new Uint8Array(await file.file.arrayBuffer());
-    }
-
-    if (!file.data) {
-      throw new Error("Missing file data.");
-    }
-
-    const payload = file.data.trim();
-    if (payload.startsWith("data:") || payload.startsWith("blob:")) {
-      const response = await fetch(payload);
-      if (!response.ok) {
-        throw new Error("Failed to load stored file data.");
+      bytes = new Uint8Array(await file.file.arrayBuffer());
+    } else {
+      if (!file.data) {
+        throw new Error("Missing file data.");
       }
-      return new Uint8Array(await response.arrayBuffer());
+
+      const payload = file.data.trim();
+      if (payload.startsWith("data:") || payload.startsWith("blob:")) {
+        const response = await fetch(payload);
+        if (!response.ok) {
+          throw new Error("Failed to load stored file data.");
+        }
+        bytes = new Uint8Array(await response.arrayBuffer());
+      } else {
+        bytes = decodeBase64Payload(payload);
+      }
     }
 
-    return decodeBase64Payload(payload);
+    const threatScan = scanBytesForThreat(bytes, file.name || "upload", file.type);
+    if (!threatScan.safe) {
+      throw new Error(threatScan.threat || "Security scan failed for uploaded file.");
+    }
+    return bytes;
   };
 
   const decodeBase64Payload = (value: string) => {

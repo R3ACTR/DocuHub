@@ -16,6 +16,7 @@
   import { useEffect, useRef, useState } from "react";                                                                                                          
   import { motion } from "framer-motion";                                                                                                                       
   import { clearStoredFiles, storeFiles } from "@/lib/fileStore";                                                                                               
+  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
                                                                                                                                                                 
   import { saveToolState, clearToolState } from "@/lib/toolStateStorage";                                                                                       
                                                                                                                                                                 
@@ -102,6 +103,8 @@
                                                                                                                                                                 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);                                                                                             
     const [fileError, setFileError] = useState<string | null>(null);                                                                                            
+    const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");
+    const [scanMessage, setScanMessage] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);                                                                                                    
     const [hasUnsavedWork, setHasUnsavedWork] = useState(false);                                                                                                
                                                                                                                                                                 
@@ -243,8 +246,41 @@
           return [".pdf"];                                                                                                                                      
       }                                                                                                                                                         
     };                                                                                                                                                          
+
+    const runSecurityScan = async (filesToScan: File[]) => {
+      if (!filesToScan.length) {
+        setScanState("idle");
+        setScanMessage(null);
+        return false;
+      }
+
+      setScanState("scanning");
+      setScanMessage("Scanning files...");
+
+      const { cleanFiles, threats } = await scanUploadedFiles(filesToScan);
+      if (!cleanFiles.length) {
+        const warning = buildThreatWarning(threats) || "Security scan failed.";
+        setSelectedFiles([]);
+        setFileError(warning);
+        setScanState("threat");
+        setScanMessage(warning);
+        return false;
+      }
+
+      setSelectedFiles(cleanFiles);
+      if (threats.length) {
+        setFileError(buildThreatWarning(threats));
+        setScanState("clean");
+        setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
+      } else {
+        setFileError(null);
+        setScanState("clean");
+        setScanMessage("Scan complete. No threats detected.");
+      }
+      return true;
+    };
                                                                                                                                                                 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {                                                                                            
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
       clearStoredFiles();                                                                                                                                       
                                                                                                                                                                 
       const files = Array.from(e.target.files || []);                                                                                                           
@@ -253,6 +289,8 @@
       const MAX_FILES = 10;                                                                                                                                     
       if (files.length > MAX_FILES) {                                                                                                                           
         setFileError(`You can upload a maximum of ${MAX_FILES} files.`);                                                                                        
+        setScanState("idle");
+        setScanMessage(null);
         return;                                                                                                                                                 
       }                                                                                                                                                         
                                                                                                                                                                 
@@ -264,24 +302,33 @@
                                                                                                                                                                 
         if (allowed.length && !allowed.includes(ext)) {                                                                                                         
           setFileError(`Unsupported file type: ${file.name}`);                                                                                                  
+          setScanState("idle");
+          setScanMessage(null);
           return;                                                                                                                                               
         }                                                                                                                                                       
                                                                                                                                                                 
         if (file.size > MAX_FILE_SIZE) {                                                                                                                        
           setFileError(`File too large: ${file.name}`);                                                                                                         
+          setScanState("idle");
+          setScanMessage(null);
           return;                                                                                                                                               
         }                                                                                                                                                       
                                                                                                                                                                 
         validFiles.push(file);                                                                                                                                  
       }                                                                                                                                                         
-                                                                                                                                                                
-      setFileError(null);                                                                                                                                       
-      setSelectedFiles(validFiles);                                                                                                                             
+
+      setFileError(null);
+      setSelectedFiles(validFiles);
+      setScanState("idle");
+      setScanMessage('Click "Scan Files" before processing.');
       setHasUnsavedWork(true);                                                                                                                                  
     };                                                                                                                                                          
                                                                                                                                                                 
     const handleProcessFile = async () => {                                                                                                                     
       if (!selectedFiles.length) return;                                                                                                                        
+      if (scanState !== "clean") {
+        return setFileError('Please click "Scan Files" and wait for a clean result.');
+      }
       if (toolId === "pdf-protect" && !protectPassword.trim())                                                                                                  
         return setFileError("Enter password.");                                                                                                                 
       if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                                 
@@ -709,11 +756,42 @@
           )}                                                                                                                                                    
                                                                                                                                                                 
           {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}                                                                               
-                                                                                                                                                                
+          {scanMessage && (
+            <p
+              className={`mt-2 text-sm ${
+                scanState === "clean"
+                  ? "text-green-700"
+                  : scanState === "threat"
+                    ? "text-red-600"
+                    : "text-gray-600"
+              }`}
+            >
+              {scanMessage}
+            </p>
+          )}
+
+          <button
+            onClick={async () => {
+              setFileError(null);
+              await runSecurityScan(selectedFiles);
+            }}
+            disabled={
+              !selectedFiles.length || isProcessing || scanState === "scanning"
+            }
+            className={`mt-6 w-full py-3 rounded-lg text-sm font-medium transition ${
+              selectedFiles.length && !isProcessing && scanState !== "scanning"
+                ? "border border-black text-black hover:bg-gray-100"
+                : "border border-gray-300 text-gray-500 cursor-not-allowed"
+            }`}
+          >
+            {scanState === "scanning" ? "Scanning..." : "Scan Files"}
+          </button>
+
           <button                                                                                                                                               
             onClick={handleProcessFile}                                                                                                                         
             disabled={                                                                                                                                          
               !selectedFiles.length ||                                                                                                                          
+              scanState !== "clean" ||
               isProcessing ||                                                                                                                                   
               (toolId === "pdf-protect" && !protectPassword.trim()) ||                                                                                          
               (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||                                                                                    
@@ -722,7 +800,7 @@
               (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                            
             }                                                                                                                                                   
             className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${                                                                           
-              selectedFiles.length && !isProcessing                                                                                                             
+              selectedFiles.length && !isProcessing && scanState === "clean"
                 ? "bg-black text-white hover:bg-gray-800"                                                                                                       
                 : "bg-gray-300 text-gray-500 cursor-not-allowed"                                                                                                
             }`}                                                                                                                                                 

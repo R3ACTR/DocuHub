@@ -4,6 +4,7 @@
   import { PDFDocument, StandardFonts } from "pdf-lib";                                                                                                         
   import type { PDFFont } from "pdf-lib";                                                                                                                       
   import * as mammoth from "mammoth";                                                                                                                           
+  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
                                                                                                                                                                 
   function sanitizeForWinAnsi(text: string, font: PDFFont) {                                                                                                    
     let result = "";                                                                                                                                            
@@ -39,6 +40,8 @@
     const [files, setFiles] = useState<File[]>([]);                                                                                                             
     const [loading, setLoading] = useState(false);                                                                                                              
     const [error, setError] = useState("");                                                                                                                     
+    const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");
+    const [scanMessage, setScanMessage] = useState("");
     const [isDragging, setIsDragging] = useState(false);                                                                                                        
     const fileInputRef = useRef<HTMLInputElement>(null);                                                                                                        
                                                                                                                                                                 
@@ -49,7 +52,7 @@
       return ALLOWED_TYPES.some((ext) => fileName.toLowerCase().endsWith(ext));                                                                                 
     };                                                                                                                                                          
                                                                                                                                                                 
-    const processSelectedFiles = (incomingFiles: File[]) => {                                                                                                   
+    const processSelectedFiles = async (incomingFiles: File[]) => {
       if (!incomingFiles.length) return;                                                                                                                        
                                                                                                                                                                 
       const validFiles: File[] = [];                                                                                                                            
@@ -67,9 +70,17 @@
         setError("Unsupported file type. Please upload: .txt, .html, .json, .docx");                                                                            
         return;                                                                                                                                                 
       }                                                                                                                                                         
+
+      const { cleanFiles, threats } = await scanUploadedFiles(validFiles);
+      if (!cleanFiles.length) {
+        setError(buildThreatWarning(threats));
+        setScanState("threat");
+        setScanMessage(buildThreatWarning(threats));
+        return;
+      }
                                                                                                                                                                 
       setFiles((prev) => {                                                                                                                                      
-        const merged = [...prev, ...validFiles];                                                                                                                
+        const merged = [...prev, ...cleanFiles];
         return merged.filter(                                                                                                                                   
           (file, index, arr) =>                                                                                                                                 
             arr.findIndex(                                                                                                                                      
@@ -80,29 +91,60 @@
             ) === index                                                                                                                                         
         );                                                                                                                                                      
       });                                                                                                                                                       
-                                                                                                                                                                
-      if (invalidFileNames.length) {                                                                                                                            
-        setError(
-          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`                                                 
-        );                                                                                                                                                      
-        return;                                                                                                                                                 
-      }                                                                                                                                                         
-                                                                                                                                                                
-      setError("");                                                                                                                                             
+
+      const warnings: string[] = [];
+      if (invalidFileNames.length) {
+        warnings.push(
+          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`
+        );
+      }
+      if (threats.length) {
+        warnings.push(buildThreatWarning(threats));
+      }
+
+      setError(warnings.join(" ").trim());
+      setScanState("idle");
+      setScanMessage('Click "Scan Files" before converting.');
     };                                                                                                                                                          
+
+    const runScan = async () => {
+      if (!files.length) return;
+      setScanState("scanning");
+      setScanMessage("Scanning files...");
+      setError("");
+
+      const { cleanFiles, threats } = await scanUploadedFiles(files);
+      if (!cleanFiles.length) {
+        const warning = buildThreatWarning(threats) || "Security scan failed.";
+        setFiles([]);
+        setError(warning);
+        setScanState("threat");
+        setScanMessage(warning);
+        return;
+      }
+
+      setFiles(cleanFiles);
+      if (threats.length) {
+        setError(buildThreatWarning(threats));
+        setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
+      } else {
+        setScanMessage("Scan complete. No threats detected.");
+      }
+      setScanState("clean");
+    };
                                                                                                                                                                 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {                                                                                      
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files?.length) return;                                                                                                                      
-      processSelectedFiles(Array.from(e.target.files));                                                                                                         
+      await processSelectedFiles(Array.from(e.target.files));
       e.target.value = "";                                                                                                                                      
     };                                                                                                                                                          
                                                                                                                                                                 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {                                                                                                
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();                                                                                                                                       
       setIsDragging(false);                                                                                                                                     
                                                                                                                                                                 
       if (!e.dataTransfer.files?.length) return;                                                                                                                
-      processSelectedFiles(Array.from(e.dataTransfer.files));                                                                                                   
+      await processSelectedFiles(Array.from(e.dataTransfer.files));
     };                                                                                                                                                          
                                                                                                                                                                 
     const handleRemoveFile = (indexToRemove: number) => {                                                                                                       
@@ -112,6 +154,8 @@
     const clearSelection = () => {                                                                                                                              
       setFiles([]);                                                                                                                                             
       setError("");                                                                                                                                             
+      setScanState("idle");
+      setScanMessage("");
       if (fileInputRef.current) {                                                                                                                               
         fileInputRef.current.value = "";                                                                                                                        
       }                                                                                                                                                         
@@ -191,6 +235,10 @@
                                                                                                                                                                 
     const handleConvert = async () => {                                                                                                                         
       if (!files.length) return;                                                                                                                                
+      if (scanState !== "clean") {
+        setError('Please click "Scan Files" before converting.');
+        return;
+      }
                                                                                                                                                                 
       setLoading(true);                                                                                                                                         
       setError("");                                                                                                                                             
@@ -257,6 +305,11 @@
             {error}                                                                                                                                             
           </p>                                                                                                                                                  
         )}                                                                                                                                                      
+        {scanMessage && (
+          <p style={{ color: scanState === "clean" ? "green" : "#4b5563", marginTop: 10 }}>
+            {scanMessage}
+          </p>
+        )}
                                                                                                                                                                 
         {files.length > 0 && (                                                                                                                                  
           <>                                                                                                                                                    
@@ -310,16 +363,32 @@
                                                                                                                                                                 
         <br />                                                                                                                                                  
                                                                                                                                                                 
-        <button                                                                                                                                                 
+        <button                                                                                                                                             
+          onClick={runScan}
+          disabled={loading || files.length === 0 || scanState === "scanning"}
+          style={{
+            marginTop: 12,
+            padding: "10px 24px",
+            background: loading || files.length === 0 || scanState === "scanning" ? "#9ca3af" : "#fff",
+            color: loading || files.length === 0 || scanState === "scanning" ? "white" : "#111827",
+            border: "1px solid #111827",
+            borderRadius: 8,
+            cursor: loading || files.length === 0 || scanState === "scanning" ? "not-allowed" : "pointer",
+          }}
+        >
+          {scanState === "scanning" ? "Scanning..." : "Scan Files"}
+        </button>
+
+        <button                                                                                                                                             
           onClick={handleConvert}                                                                                                                               
-          disabled={loading || files.length === 0}                                                                                                              
+          disabled={loading || files.length === 0 || scanState !== "clean"}
           style={{                                                                                                                                              
             padding: "12px 24px",                                                                                                                               
-            background: "#6c63ff",                                                                                                                              
-            color: "white",                                                                                                                                     
+            background: loading || files.length === 0 || scanState !== "clean" ? "#9ca3af" : "#6c63ff",
+            color: "white",
             border: "none",                                                                                                                                     
             borderRadius: 8,                                                                                                                                    
-            cursor: loading || files.length === 0 ? "not-allowed" : "pointer",                                                                                  
+            cursor: loading || files.length === 0 || scanState !== "clean" ? "not-allowed" : "pointer",
           }}                                                                                                                                                    
         >                                                                                                                                                       
           {loading ? "Converting..." : `Convert ${files.length} file(s) to PDF`}                                                                                

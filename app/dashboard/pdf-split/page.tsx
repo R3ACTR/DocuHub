@@ -2,12 +2,16 @@
 
 import { useState } from "react";
 import { PDFDocument } from "pdf-lib";
+import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
 
 export default function PdfSplitPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [pageRange, setPageRange] = useState("");
+  const [securityWarning, setSecurityWarning] = useState("");
+  const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");
+  const [scanMessage, setScanMessage] = useState("");
 
   /* ✅ SUCCESS STATE */
   const [successMsg, setSuccessMsg] = useState("");
@@ -29,7 +33,7 @@ export default function PdfSplitPage() {
 
   const handleDragLeave = () => setIsDragging(false);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
 
@@ -38,7 +42,41 @@ export default function PdfSplitPage() {
     );
 
     if (!droppedFiles.length) return;
-    setFiles([droppedFiles[0]]);
+    const { cleanFiles, threats } = await scanUploadedFiles(droppedFiles);
+    if (!cleanFiles.length) {
+      setSecurityWarning(buildThreatWarning(threats));
+      return;
+    }
+    setSecurityWarning(threats.length ? buildThreatWarning(threats) : "");
+    setFiles([cleanFiles[0]]);
+    setScanState("idle");
+    setScanMessage('Click "Scan Files" before splitting.');
+  };
+
+  const runScan = async () => {
+    if (!files.length) return;
+    setScanState("scanning");
+    setScanMessage("Scanning files...");
+    setSecurityWarning("");
+
+    const { cleanFiles, threats } = await scanUploadedFiles(files);
+    if (!cleanFiles.length) {
+      const warning = buildThreatWarning(threats) || "Security scan failed.";
+      setFiles([]);
+      setSecurityWarning(warning);
+      setScanState("threat");
+      setScanMessage(warning);
+      return;
+    }
+
+    setFiles([cleanFiles[0]]);
+    if (threats.length) {
+      setSecurityWarning(buildThreatWarning(threats));
+      setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
+    } else {
+      setScanMessage("Scan complete. No threats detected.");
+    }
+    setScanState("clean");
   };
 
   const handleSplit = async () => {
@@ -139,12 +177,30 @@ export default function PdfSplitPage() {
           type="file"
           accept="application/pdf"
           required
-          onChange={(e) => {
+          onChange={async (e) => {
             if (!e.target.files) return;
-            setFiles([e.target.files[0]]);
+            const { cleanFiles, threats } = await scanUploadedFiles(Array.from(e.target.files));
+            if (!cleanFiles.length) {
+              setSecurityWarning(buildThreatWarning(threats));
+              e.target.value = "";
+              return;
+            }
+            setSecurityWarning(threats.length ? buildThreatWarning(threats) : "");
+            setFiles([cleanFiles[0]]);
+            setScanState("idle");
+            setScanMessage('Click "Scan Files" before splitting.');
+            e.target.value = "";
           }}
           className="mx-auto block"
         />
+        {securityWarning && (
+          <p className="text-red-600 text-sm mt-2">{securityWarning}</p>
+        )}
+        {scanMessage && (
+          <p className={`text-sm mt-2 ${scanState === "clean" ? "text-green-700" : "text-gray-600"}`}>
+            {scanMessage}
+          </p>
+        )}
 
         {/* ✅ File Count */}
         <p className="text-sm text-gray-500 mt-2">
@@ -214,10 +270,21 @@ export default function PdfSplitPage() {
 
       {/* Split Button */}
       <button
-        onClick={handleSplit}
-        disabled={loading || !files.length || !pageRange}
+        onClick={runScan}
+        disabled={loading || !files.length || scanState === "scanning"}
         className={`w-full mt-6 py-3 rounded-lg font-medium transition ${
-          loading || !files.length || !pageRange
+          loading || !files.length || scanState === "scanning"
+            ? "bg-gray-400 cursor-not-allowed text-white"
+            : "bg-white border border-black text-black hover:bg-gray-100"
+        }`}
+      >
+        {scanState === "scanning" ? "Scanning..." : "Scan Files"}
+      </button>
+      <button
+        onClick={handleSplit}
+        disabled={loading || !files.length || !pageRange || scanState !== "clean"}
+        className={`w-full mt-6 py-3 rounded-lg font-medium transition ${
+          loading || !files.length || !pageRange || scanState !== "clean"
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-indigo-600 hover:bg-indigo-700 text-white"
         }`}

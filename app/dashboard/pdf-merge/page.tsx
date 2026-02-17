@@ -28,6 +28,7 @@ import {
   Download,
   Printer,
 } from 'lucide-react';
+import { buildThreatWarning, scanUploadedFiles } from '@/lib/security/virusScan';
 
 interface FileWithId {
   id: string;
@@ -41,6 +42,9 @@ export default function PdfMergePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [mergedPdfUrl, setMergedPdfUrl] = useState('');
+  const [securityWarning, setSecurityWarning] = useState('');
+  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'clean' | 'threat'>('idle');
+  const [scanMessage, setScanMessage] = useState('');
   const [, forceUpdate] = useState(0);
 
   const getRelativeTime = (timestamp: number) => {
@@ -72,16 +76,24 @@ export default function PdfMergePage() {
     };
   }, [mergedPdfUrl]);
 
-  const replaceFile = (idToReplace: string, newFile: File) => {
+  const replaceFile = async (idToReplace: string, newFile: File) => {
     if (newFile.type !== 'application/pdf') return;
+    const { cleanFiles, threats } = await scanUploadedFiles([newFile]);
+    if (!cleanFiles.length) {
+      setSecurityWarning(buildThreatWarning(threats));
+      return;
+    }
 
     setFilesWithIds((prev) =>
       prev.map((item) =>
         item.id === idToReplace
-          ? { ...item, file: newFile, uploadedAt: Date.now() }
+          ? { ...item, file: cleanFiles[0], uploadedAt: Date.now() }
           : item
       )
     );
+    setSecurityWarning(threats.length ? buildThreatWarning(threats) : '');
+    setScanState('idle');
+    setScanMessage('Click "Scan Files" before merging.');
   };
 
   const sensors = useSensors(
@@ -98,7 +110,7 @@ export default function PdfMergePage() {
 
   const handleDragLeave = () => setIsDraggingOver(false);
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDraggingOver(false);
 
@@ -108,34 +120,94 @@ export default function PdfMergePage() {
 
     if (droppedFiles.length === 0) return;
 
-    const newFiles = droppedFiles.map((file) => ({
+    const { cleanFiles, threats } = await scanUploadedFiles(droppedFiles);
+    if (!cleanFiles.length) {
+      setSecurityWarning(buildThreatWarning(threats));
+      return;
+    }
+
+    const newFiles = cleanFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       uploadedAt: Date.now(),
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
+    setSecurityWarning(threats.length ? buildThreatWarning(threats) : '');
+    setScanState('idle');
+    setScanMessage('Click "Scan Files" before merging.');
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
 
     const selectedFiles = Array.from(e.target.files).filter(
       (file) => file.type === 'application/pdf'
     );
 
-    const newFiles = selectedFiles.map((file) => ({
+    const { cleanFiles, threats } = await scanUploadedFiles(selectedFiles);
+    if (!cleanFiles.length) {
+      setSecurityWarning(buildThreatWarning(threats));
+      e.target.value = '';
+      return;
+    }
+
+    const newFiles = cleanFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
       uploadedAt: Date.now(),
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
+    setSecurityWarning(threats.length ? buildThreatWarning(threats) : '');
+    setScanState('idle');
+    setScanMessage('Click "Scan Files" before merging.');
     e.target.value = '';
+  };
+
+  const runScan = async () => {
+    if (!filesWithIds.length) return;
+
+    setScanState('scanning');
+    setScanMessage('Scanning files...');
+    setSecurityWarning('');
+    const scanResults = await Promise.all(
+      filesWithIds.map(async (item) => {
+        const { cleanFiles, threats } = await scanUploadedFiles([item.file]);
+        return { item, isClean: cleanFiles.length > 0, threats };
+      }),
+    );
+
+    const cleanItems = scanResults.filter((result) => result.isClean).map((result) => result.item);
+    const threats = scanResults.flatMap((result) => result.threats);
+
+    if (!cleanItems.length) {
+      setFilesWithIds([]);
+      const warning = buildThreatWarning(threats) || 'Security scan failed.';
+      setSecurityWarning(warning);
+      setScanState('threat');
+      setScanMessage(warning);
+      return;
+    }
+
+    if (cleanItems.length !== filesWithIds.length) {
+      setFilesWithIds(cleanItems);
+    }
+
+    if (threats.length) {
+      const warning = buildThreatWarning(threats);
+      setSecurityWarning(warning);
+      setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
+    } else {
+      setScanMessage('Scan complete. No threats detected.');
+    }
+    setScanState('clean');
   };
 
   const removeFile = (idToRemove: string) => {
     setFilesWithIds((prev) => prev.filter((item) => item.id !== idToRemove));
+    setScanState('idle');
+    setScanMessage('Click "Scan Files" before merging.');
   };
 
   const clearAll = () => {
@@ -145,6 +217,9 @@ export default function PdfMergePage() {
 
     if (confirmClear) {
       setFilesWithIds([]);
+      setScanState('idle');
+      setScanMessage('');
+      setSecurityWarning('');
     }
   };
 
@@ -157,6 +232,8 @@ export default function PdfMergePage() {
         const newIndex = items.findIndex((i) => i.id === over.id);
         return arrayMove(items, oldIndex, newIndex);
       });
+      setScanState('idle');
+      setScanMessage('Click "Scan Files" before merging.');
     }
   };
 
@@ -195,6 +272,11 @@ export default function PdfMergePage() {
   };
 
   const handleMerge = async () => {
+    if (scanState !== 'clean') {
+      alert('Please click "Scan Files" and wait for a clean result.');
+      return;
+    }
+
     if (filesWithIds.length < 2) {
       alert('Please select at least 2 PDF files');
       return;
@@ -256,7 +338,9 @@ export default function PdfMergePage() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           const id = e.currentTarget.getAttribute('data-replace-id');
-          if (file && id) replaceFile(id, file);
+          if (file && id) {
+            void replaceFile(id, file);
+          }
           e.currentTarget.value = '';
         }}
       />
@@ -266,6 +350,14 @@ export default function PdfMergePage() {
           <Combine className="w-8 h-8" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900">Merge PDF Files</h1>
+        {securityWarning && (
+          <p className="mt-3 text-sm text-red-600">{securityWarning}</p>
+        )}
+        {scanMessage && (
+          <p className={`mt-2 text-sm ${scanState === 'clean' ? 'text-green-700' : 'text-gray-600'}`}>
+            {scanMessage}
+          </p>
+        )}
       </div>
 
       <div
@@ -340,8 +432,15 @@ export default function PdfMergePage() {
 
           <div className="pt-6 flex justify-center">
             <button
+              onClick={runScan}
+              disabled={!filesWithIds.length || loading || scanState === 'scanning'}
+              className="mr-3 flex items-center gap-3 px-8 py-4 border border-black text-black font-semibold rounded-2xl"
+            >
+              {scanState === 'scanning' ? 'Scanning...' : 'Scan Files'}
+            </button>
+            <button
               onClick={handleMerge}
-              disabled={loading || filesWithIds.length < 2}
+              disabled={loading || filesWithIds.length < 2 || scanState !== 'clean'}
               className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl"
             >
               {loading ? (
