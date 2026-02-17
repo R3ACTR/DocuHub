@@ -118,6 +118,8 @@ export default function ToolUploadPage() {
   const [compressionLevel, setCompressionLevel] = useState<
     "low" | "medium" | "high"
   >("medium");
+  const [compressionTargetBytesInput, setCompressionTargetBytesInput] =
+    useState("");
   const [protectPassword, setProtectPassword] = useState("");
   const [passwordRemoverPassword, setPasswordRemoverPassword] = useState("");
   const [deletePagesInput, setDeletePagesInput] = useState("");
@@ -164,6 +166,21 @@ export default function ToolUploadPage() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedWork]);
+
+  useEffect(() => {
+    if (toolId !== "pdf-compress") return;
+
+    const savedLevel = localStorage.getItem("compressionLevel");
+    if (savedLevel === "low" || savedLevel === "medium" || savedLevel === "high") {
+      setCompressionLevel(savedLevel);
+    }
+
+    const savedTarget =
+      localStorage.getItem("compressionTargetBytes") ||
+      localStorage.getItem("targetBytes") ||
+      "";
+    setCompressionTargetBytesInput(savedTarget);
+  }, [toolId]);
 
   const getSupportedTypes = () => {
     switch (toolId) {
@@ -228,6 +245,17 @@ export default function ToolUploadPage() {
       return setFileError("Enter password.");
     if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())
       return setFileError("Enter password.");
+    if (toolId === "pdf-compress") {
+      localStorage.setItem("compressionLevel", compressionLevel);
+      const parsedTarget = Number.parseInt(compressionTargetBytesInput.trim(), 10);
+      if (Number.isFinite(parsedTarget) && parsedTarget > 0) {
+        localStorage.setItem("compressionTargetBytes", String(parsedTarget));
+        localStorage.setItem("targetBytes", String(parsedTarget));
+      } else {
+        localStorage.removeItem("compressionTargetBytes");
+        localStorage.removeItem("targetBytes");
+      }
+    }
 
     setIsProcessing(true);
 
@@ -377,6 +405,44 @@ export default function ToolUploadPage() {
         </motion.div>
 
         <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>
+
+        {toolId === "pdf-compress" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Compression Level
+              </label>
+              <select
+                value={compressionLevel}
+                onChange={(e) =>
+                  setCompressionLevel(e.target.value as "low" | "medium" | "high")
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="low">Low (higher quality)</option>
+                <option value="medium">Medium</option>
+                <option value="high">High (smaller size)</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Target Size (bytes)
+              </label>
+              <input
+                type="number"
+                min={1}
+                step={1}
+                value={compressionTargetBytesInput}
+                onChange={(e) => setCompressionTargetBytesInput(e.target.value)}
+                placeholder="Optional, e.g. 500000"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                Optional. If set, we try to reach this size and report when not possible.
+              </p>
+            </div>
+          </div>
+        )}
 
         {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
 

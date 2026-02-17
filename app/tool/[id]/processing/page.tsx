@@ -21,6 +21,15 @@ type DownloadItem = {
   name: string;
 };
 
+type CompressionApiResponse = {
+  status: "no_target" | "target_reached" | "target_unreachable";
+  targetBytes: number | null;
+  originalBytes: number;
+  compressedBytes: number;
+  outputBase64: string;
+  error?: string;
+};
+
 const SUPPORTED_PROCESSING_TOOLS = new Set([
   "ocr",
   "pdf-protect",
@@ -53,6 +62,10 @@ export default function ProcessingPage() {
   const [downloadItems, setDownloadItems] = useState<DownloadItem[]>([]);
   const [originalSize, setOriginalSize] = useState<number | null>(null);
   const [compressedSize, setCompressedSize] = useState<number | null>(null);
+  const [compressionTargetBytes, setCompressionTargetBytes] = useState<number | null>(null);
+  const [compressionTargetStatus, setCompressionTargetStatus] = useState<
+    "no_target" | "target_reached" | "target_unreachable"
+  >("no_target");
 
   useEffect(() => {
     return () => {
@@ -142,26 +155,45 @@ export default function ProcessingPage() {
     setStage("Preparing file...");
     setProgress(20);
 
-    const structuralSource = new Uint8Array(sourceBytes);
-    structuralSource.set(sourceBytes);
-
     const level = getCompressionLevelFromState();
+    const targetBytes = getCompressionTargetBytesFromState();
+    setCompressionTargetBytes(targetBytes);
     setStage(`Compressing PDF (${level})...`);
     setProgress(45);
 
-    const compressed =
-      level === "low"
-        ? await structuralCompressPdf(structuralSource)
-        : await rasterCompressPdf(file, new Uint8Array(sourceBytes), level);
+    const payload = new FormData();
+    payload.append(
+      "file",
+      new File([sourceBytes], file.name || "upload.pdf", {
+        type: file.type || "application/pdf",
+      }),
+    );
+    payload.append("compressionLevel", level);
+    if (targetBytes != null) {
+      payload.append("targetBytes", String(targetBytes));
+    }
 
-    const finalBytes =
-      compressed.length < sourceBytes.length
-        ? compressed
-        : await structuralCompressPdf(structuralSource);
+    const response = await fetch("/api/compress", {
+      method: "POST",
+      body: payload,
+    });
+    const result = (await response.json()) as CompressionApiResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Compression API request failed.");
+    }
+
+    if (!result.outputBase64) {
+      throw new Error("Compression API returned no output.");
+    }
+
+    const finalBytes = decodeBase64Payload(result.outputBase64);
+    setCompressionTargetStatus(result.status || "no_target");
+    setCompressionTargetBytes(result.targetBytes);
 
     setStage("Finalizing...");
     setProgress(85);
-    setCompressedSize(finalBytes.length);
+    setCompressedSize(result.compressedBytes || finalBytes.length);
     setDownloadItems([
       {
         url: makeBlobUrl(finalBytes, "application/pdf"),
@@ -612,84 +644,6 @@ export default function ProcessingPage() {
     setStatus("done");
   };
 
-  const structuralCompressPdf = async (bytes: Uint8Array) => {
-    const sourcePdf = await PDFDocument.load(bytes);
-    const outputPdf = await PDFDocument.create();
-    const pages = await outputPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
-    pages.forEach((page) => outputPdf.addPage(page));
-
-    return outputPdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 20,
-    });
-  };
-
-  const rasterCompressPdf = async (
-    file: StoredFile,
-    bytes: Uint8Array,
-    level: "medium" | "high"
-  ) => {
-    const loadingTask = await loadPdfJsDocument(bytes, file.name);
-    const inputPdf = loadingTask;
-    const outputPdf = await PDFDocument.create();
-    const renderScale = level === "high" ? 1.0 : 1.25;
-    const jpegQuality = level === "high" ? 0.55 : 0.72;
-
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d", { alpha: false });
-    if (!context) {
-      throw new Error("Canvas context is unavailable.");
-    }
-
-    for (let pageNumber = 1; pageNumber <= inputPdf.numPages; pageNumber++) {
-      setStage(`Compressing page ${pageNumber}/${inputPdf.numPages}...`);
-      setProgress(45 + Math.round((pageNumber / inputPdf.numPages) * 35));
-
-      const page = await inputPdf.getPage(pageNumber);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const renderViewport = page.getViewport({ scale: renderScale });
-
-      canvas.width = Math.max(1, Math.floor(renderViewport.width));
-      canvas.height = Math.max(1, Math.floor(renderViewport.height));
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-
-      await page.render({
-        canvasContext: context,
-        viewport: renderViewport,
-      }).promise;
-
-      const jpegBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error("Image encoding failed"))),
-          "image/jpeg",
-          jpegQuality
-        );
-      });
-
-      const jpgBytes = new Uint8Array(await jpegBlob.arrayBuffer());
-      const image = await outputPdf.embedJpg(jpgBytes);
-      const outPage = outputPdf.addPage([baseViewport.width, baseViewport.height]);
-      outPage.drawImage(image, {
-        x: 0,
-        y: 0,
-        width: baseViewport.width,
-        height: baseViewport.height,
-      });
-    }
-
-    canvas.width = 0;
-    canvas.height = 0;
-    await inputPdf.destroy();
-
-    return outputPdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 20,
-    });
-  };
-
   const readPdfBytes = async (file: StoredFile) => {
     const primary = await readRawBytes(file);
     try {
@@ -763,6 +717,14 @@ export default function ProcessingPage() {
       return value;
     }
     return "medium";
+  };
+
+  const getCompressionTargetBytesFromState = () => {
+    const raw = localStorage.getItem("compressionTargetBytes") || localStorage.getItem("targetBytes");
+    if (!raw) return null;
+    const parsed = Number.parseInt(raw, 10);
+    if (!Number.isFinite(parsed) || parsed <= 0) return null;
+    return parsed;
   };
 
   const parsePageSelection = (input: string, totalPages: number) => {
@@ -902,6 +864,17 @@ export default function ProcessingPage() {
             <p className="font-semibold text-green-600">
               Reduced {(((originalSize - compressedSize) / originalSize) * 100).toFixed(1)}%
             </p>
+            {compressionTargetBytes != null && (
+              <p className="mt-1">Target: {(compressionTargetBytes / 1024 / 1024).toFixed(2)} MB</p>
+            )}
+            {compressionTargetStatus === "target_reached" && (
+              <p className="font-semibold text-green-600">Target size reached.</p>
+            )}
+            {compressionTargetStatus === "target_unreachable" && (
+              <p className="font-semibold text-amber-600">
+                Target size could not be reached. Downloading closest result.
+              </p>
+            )}
           </div>
         )}
 
