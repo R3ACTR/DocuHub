@@ -28,6 +28,12 @@ type CompressionApiResponse = {
   targetBytes: number | null;
   originalBytes: number;
   compressedBytes: number;
+  settings?: {
+    requestedLevel: "low" | "medium" | "high";
+    appliedLevel: "low" | "medium" | "high";
+    useObjectStreams: boolean;
+    rewriteMode: "direct" | "rebuilt";
+  };
   outputBase64: string;
   error?: string;
 };
@@ -69,6 +75,13 @@ export default function ProcessingPage() {
   const [compressionTargetStatus, setCompressionTargetStatus] = useState<
     "no_target" | "target_reached" | "target_unreachable"
   >("no_target");
+  const [compressionLevelUsed, setCompressionLevelUsed] = useState<"low" | "medium" | "high">(
+    "medium",
+  );
+  const [compressionRewriteMode, setCompressionRewriteMode] = useState<"direct" | "rebuilt">(
+    "direct",
+  );
+  const [compressionUsesObjectStreams, setCompressionUsesObjectStreams] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -224,6 +237,9 @@ export default function ProcessingPage() {
     const finalBytes = decodeBase64Payload(result.outputBase64);
     setCompressionTargetStatus(result.status || "no_target");
     setCompressionTargetBytes(result.targetBytes);
+    setCompressionLevelUsed(result.settings?.appliedLevel || level);
+    setCompressionRewriteMode(result.settings?.rewriteMode || "direct");
+    setCompressionUsesObjectStreams(Boolean(result.settings?.useObjectStreams));
 
     setStage("Finalizing...");
     setProgress(85);
@@ -978,6 +994,9 @@ export default function ProcessingPage() {
 
         {toolId === "pdf-compress" && originalSize && compressedSize && (
           <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
+            <p>Compression level: {compressionLevelUsed}</p>
+            <p>Processing mode: {compressionRewriteMode}</p>
+            <p>Object streams: {compressionUsesObjectStreams ? "enabled" : "disabled"}</p>
             <p>Original: {(originalSize / 1024 / 1024).toFixed(2)} MB</p>
             <p>Compressed: {(compressedSize / 1024 / 1024).toFixed(2)} MB</p>
             <p className="font-semibold text-green-600">

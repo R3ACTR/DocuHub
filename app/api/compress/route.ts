@@ -5,10 +5,18 @@ export const runtime = "nodejs";
 
 type CompressionLevel = "low" | "medium" | "high";
 type CompressionStatus = "no_target" | "target_reached" | "target_unreachable";
+type RewriteMode = "direct" | "rebuilt";
 
 type Candidate = {
   bytes: Uint8Array;
-  score: number;
+  profile: CompressionProfile;
+};
+
+type CompressionProfile = {
+  id: string;
+  useObjectStreams: boolean;
+  objectsPerTick: number;
+  rewriteMode: RewriteMode;
 };
 
 const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
@@ -36,7 +44,7 @@ export async function POST(request: NextRequest) {
     await assertPdfReadable(sourceBytes);
 
     const candidates = await buildCandidates(sourceBytes, level);
-    const selected = selectCandidate(sourceBytes, candidates, targetBytes);
+    const selected = selectCandidate(sourceBytes, candidates, level, targetBytes);
 
     const compressedBytes = selected.bytes.length;
     const reductionRatio =
@@ -57,6 +65,12 @@ export async function POST(request: NextRequest) {
       originalBytes: sourceBytes.length,
       compressedBytes,
       reductionRatio,
+      settings: {
+        requestedLevel: level,
+        appliedLevel: level,
+        useObjectStreams: selected.profile.useObjectStreams,
+        rewriteMode: selected.profile.rewriteMode,
+      },
       outputBase64: Buffer.from(selected.bytes).toString("base64"),
     });
   } catch (error) {
@@ -76,18 +90,19 @@ async function buildCandidates(
   level: CompressionLevel,
 ): Promise<Candidate[]> {
   const profiles = getProfilesForLevel(level);
-  const unique = new Map<number, Candidate>();
+  const unique = new Map<string, Candidate>();
 
   for (const profile of profiles) {
     try {
       const bytes = await structuralCompress(sourceBytes, {
         useObjectStreams: profile.useObjectStreams,
         objectsPerTick: profile.objectsPerTick,
+        rewriteMode: profile.rewriteMode,
       });
-      const score = profile.score;
-      const existing = unique.get(bytes.length);
-      if (!existing || score > existing.score) {
-        unique.set(bytes.length, { bytes, score });
+      const key = `${bytes.length}-${profile.rewriteMode}-${profile.useObjectStreams}`;
+      const existing = unique.get(key);
+      if (!existing) {
+        unique.set(key, { bytes, profile });
       }
     } catch {
       // Ignore failed profiles and keep successful candidates.
@@ -104,44 +119,62 @@ async function buildCandidates(
 function selectCandidate(
   sourceBytes: Uint8Array,
   candidates: Candidate[],
+  level: CompressionLevel,
   targetBytes: number | null,
 ): Candidate {
-  const all = [...candidates, { bytes: sourceBytes, score: 100 }];
-  const improving = all.filter((item) => item.bytes.length <= sourceBytes.length);
-  const pool = improving.length ? improving : all;
+  const sourceCandidate: Candidate = {
+    bytes: sourceBytes,
+    profile: {
+      id: "source",
+      useObjectStreams: false,
+      objectsPerTick: 20,
+      rewriteMode: "direct",
+    },
+  };
+  const improving = candidates.filter((item) => item.bytes.length <= sourceBytes.length);
+  if (!improving.length) {
+    return sourceCandidate;
+  }
 
   if (targetBytes == null) {
-    return pool.reduce((best, current) =>
-      current.bytes.length < best.bytes.length ? current : best,
-    );
+    return chooseByLevel(improving, level);
   }
 
-  const reachesTarget = pool
-    .filter((item) => item.bytes.length <= targetBytes)
-    .sort((a, b) => b.score - a.score || b.bytes.length - a.bytes.length);
+  const reachesTarget = improving.filter((item) => item.bytes.length <= targetBytes);
 
   if (reachesTarget.length) {
-    return reachesTarget[0];
+    return chooseByLevel(reachesTarget, level);
   }
 
-  return pool.reduce((best, current) =>
-    current.bytes.length < best.bytes.length ? current : best,
-  );
+  return chooseByLevel(improving, level);
 }
 
 async function structuralCompress(
   sourceBytes: Uint8Array,
-  options: { useObjectStreams: boolean; objectsPerTick: number },
+  options: {
+    useObjectStreams: boolean;
+    objectsPerTick: number;
+    rewriteMode: RewriteMode;
+  },
 ) {
   const sourcePdf = await PDFDocument.load(sourceBytes, {
     ignoreEncryption: true,
     updateMetadata: false,
   });
-  const outputPdf = await PDFDocument.create();
-  const pages = await outputPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
-  pages.forEach((page) => outputPdf.addPage(page));
+  if (options.rewriteMode === "direct") {
+    return sourcePdf.save({
+      useObjectStreams: options.useObjectStreams,
+      addDefaultPage: false,
+      objectsPerTick: options.objectsPerTick,
+      updateFieldAppearances: false,
+    });
+  }
 
-  return outputPdf.save({
+  const rebuiltPdf = await PDFDocument.create();
+  const pages = await rebuiltPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
+  pages.forEach((page) => rebuiltPdf.addPage(page));
+
+  return rebuiltPdf.save({
     useObjectStreams: options.useObjectStreams,
     addDefaultPage: false,
     objectsPerTick: options.objectsPerTick,
@@ -167,27 +200,84 @@ function parseTargetBytes(raw: FormDataEntryValue | null): number | null {
   return parsed;
 }
 
+function chooseByLevel(candidates: Candidate[], level: CompressionLevel): Candidate {
+  const sorted = [...candidates].sort((a, b) => a.bytes.length - b.bytes.length);
+  if (level === "high") return sorted[0];
+  if (level === "low") return sorted[sorted.length - 1];
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
 function getProfilesForLevel(level: CompressionLevel) {
   if (level === "low") {
     return [
-      { useObjectStreams: true, objectsPerTick: 20, score: 90 },
-      { useObjectStreams: false, objectsPerTick: 20, score: 80 },
+      {
+        id: "low-direct-no-streams",
+        useObjectStreams: false,
+        objectsPerTick: 30,
+        rewriteMode: "direct" as const,
+      },
+      {
+        id: "low-rebuilt-no-streams",
+        useObjectStreams: false,
+        objectsPerTick: 30,
+        rewriteMode: "rebuilt" as const,
+      },
+      {
+        id: "low-direct-streams",
+        useObjectStreams: true,
+        objectsPerTick: 30,
+        rewriteMode: "direct" as const,
+      },
     ];
   }
 
   if (level === "high") {
     return [
-      { useObjectStreams: false, objectsPerTick: 120, score: 30 },
-      { useObjectStreams: true, objectsPerTick: 120, score: 40 },
-      { useObjectStreams: false, objectsPerTick: 20, score: 50 },
-      { useObjectStreams: true, objectsPerTick: 20, score: 60 },
+      {
+        id: "high-rebuilt-streams",
+        useObjectStreams: true,
+        objectsPerTick: 100,
+        rewriteMode: "rebuilt" as const,
+      },
+      {
+        id: "high-direct-streams",
+        useObjectStreams: true,
+        objectsPerTick: 100,
+        rewriteMode: "direct" as const,
+      },
+      {
+        id: "high-rebuilt-no-streams",
+        useObjectStreams: false,
+        objectsPerTick: 100,
+        rewriteMode: "rebuilt" as const,
+      },
     ];
   }
 
   return [
-    { useObjectStreams: false, objectsPerTick: 50, score: 60 },
-    { useObjectStreams: true, objectsPerTick: 50, score: 70 },
-    { useObjectStreams: false, objectsPerTick: 20, score: 80 },
-    { useObjectStreams: true, objectsPerTick: 20, score: 85 },
+    {
+      id: "medium-direct-no-streams",
+      useObjectStreams: false,
+      objectsPerTick: 50,
+      rewriteMode: "direct" as const,
+    },
+    {
+      id: "medium-rebuilt-no-streams",
+      useObjectStreams: false,
+      objectsPerTick: 50,
+      rewriteMode: "rebuilt" as const,
+    },
+    {
+      id: "medium-direct-streams",
+      useObjectStreams: true,
+      objectsPerTick: 50,
+      rewriteMode: "direct" as const,
+    },
+    {
+      id: "medium-rebuilt-streams",
+      useObjectStreams: true,
+      objectsPerTick: 50,
+      rewriteMode: "rebuilt" as const,
+    },
   ];
 }
