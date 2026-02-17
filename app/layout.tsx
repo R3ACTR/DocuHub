@@ -3,6 +3,7 @@ import localFont from "next/font/local";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { KeyboardShortcutsModal } from "@/components/KeyboardShortcutsModal";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/ThemeProvider";
@@ -35,6 +36,7 @@ export default function RootLayout({
         <ThemeProvider>
           <Header />
           {children}
+          <KeyboardShortcutsModal />
           <ScrollToTop />
           <Footer />
         </ThemeProvider>
