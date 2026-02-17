@@ -1,13 +1,8 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { Copy, Trash2 } from "lucide-react";
 import { useState } from "react";
-
-export type RecentFile = {
-  fileName: string;
-  tool: string;
-  time: string;
-};
+import { RecentFile } from "@/lib/hooks/useRecentFiles";
 
 interface RecentFilesProps {
   files: RecentFile[];
@@ -19,6 +14,35 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showClearModal, setShowClearModal] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+
+  const fallbackToolLinks: Record<string, string> = {
+    "document to pdf": "/dashboard/document-to-pdf",
+    "pdf merge": "/dashboard/pdf-merge",
+    "pdf split": "/dashboard/pdf-split",
+    "pdf compress": "/dashboard/pdf-compress",
+    "pdf watermark": "/dashboard/pdf-watermark",
+    "pdf protect": "/dashboard/pdf-protect",
+    "pdf redact": "/dashboard/pdf-redact",
+    "metadata viewer": "/dashboard/metadata-viewer",
+  };
+
+  const resolveLink = (file: RecentFile) => {
+    if (file.link) return file.link;
+    const mapped = fallbackToolLinks[file.tool.toLowerCase()];
+    return mapped || "/dashboard";
+  };
+
+  const handleCopyLink = async (file: RecentFile, index: number) => {
+    const link = resolveLink(file);
+    const absoluteLink =
+      link.startsWith("http://") || link.startsWith("https://")
+        ? link
+        : `${window.location.origin}${link}`;
+    await navigator.clipboard.writeText(absoluteLink);
+    setCopiedIndex(index);
+    setTimeout(() => setCopiedIndex(null), 1500);
+  };
 
   if (files.length === 0) return null;
 
@@ -50,17 +74,30 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
               </p>
             </div>
 
-            {/* Delete Button */}
-            <button
-              onClick={() => {
-                setSelectedIndex(index);
-                setShowDeleteModal(true);
-              }}
-              className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
-              title="Delete"
-            >
-              <Trash2 size={18} />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleCopyLink(file, index)}
+                className="px-3 py-1.5 text-xs border rounded-md hover:bg-gray-50 transition"
+                title="Copy Link"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Copy size={14} />
+                  {copiedIndex === index ? "Copied!" : "Copy Link"}
+                </span>
+              </button>
+
+              {/* Delete Button */}
+              <button
+                onClick={() => {
+                  setSelectedIndex(index);
+                  setShowDeleteModal(true);
+                }}
+                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
+                title="Delete"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
           </div>
         ))}
       </div>

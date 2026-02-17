@@ -1,8 +1,22 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PDFDocument, StandardFonts } from "pdf-lib";
+import type { PDFFont } from "pdf-lib";
 import * as mammoth from "mammoth";
+
+function sanitizeForWinAnsi(text: string, font: PDFFont) {
+  let result = "";
+  for (const char of text) {
+    try {
+      font.encodeText(char);
+      result += char;
+    } catch {
+      result += " ";
+    }
+  }
+  return result;
+}
 
 // ✅ ADDED — Recent Files Save Function
 function saveRecentFile(fileName: string, tool: string) {
@@ -13,6 +27,7 @@ function saveRecentFile(fileName: string, tool: string) {
     fileName,
     tool,
     time: new Date().toLocaleString(),
+    link: "/dashboard/document-to-pdf",
   };
 
   files.unshift(newEntry);
@@ -25,7 +40,18 @@ export default function DocumentToPdfPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [outputUrl, setOutputUrl] = useState("");
+  const [outputName, setOutputName] = useState("");
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    return () => {
+      if (outputUrl) {
+        URL.revokeObjectURL(outputUrl);
+      }
+    };
+  }, [outputUrl]);
 
   const ALLOWED_TYPES = [".txt", ".html", ".json", ".docx"];
 
@@ -72,6 +98,13 @@ export default function DocumentToPdfPage() {
 
   const [isDragging, setIsDragging] = useState(false);
 
+  const copyPdfUrl = async () => {
+    if (!outputUrl) return;
+    await navigator.clipboard.writeText(outputUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
   const handleConvert = async () => {
     if (!files[0]) return;
 
@@ -109,6 +142,7 @@ export default function DocumentToPdfPage() {
       const page = pdfDoc.addPage([595, 842]);
 
       const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+      text = sanitizeForWinAnsi(text, font);
 
       const fontSize = 12;
       const margin = 50;
@@ -151,13 +185,18 @@ export default function DocumentToPdfPage() {
 
       const blob = new Blob([new Uint8Array(pdfBytes)], { type: "application/pdf" });
       const url = URL.createObjectURL(blob);
+      const fileName = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+
+      if (outputUrl) {
+        URL.revokeObjectURL(outputUrl);
+      }
+      setOutputUrl(url);
+      setOutputName(fileName);
 
       const a = document.createElement("a");
       a.href = url;
-      a.download = file.name.replace(/\.[^/.]+$/, "") + ".pdf";
+      a.download = fileName;
       a.click();
-
-      URL.revokeObjectURL(url);
 
       // ✅ ADDED — Save to Recent Files AFTER SUCCESS
       saveRecentFile(file.name, "Document to PDF");
@@ -257,6 +296,36 @@ export default function DocumentToPdfPage() {
       >
         {loading ? "Converting..." : "Convert to PDF"}
       </button>
+
+      {outputUrl && (
+        <div style={{ marginTop: 16, display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <a
+            href={outputUrl}
+            download={outputName || "converted.pdf"}
+            style={{
+              padding: "10px 18px",
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              color: "#111",
+              textDecoration: "none",
+              background: "#fff",
+            }}
+          >
+            Download Again
+          </a>
+          <button
+            onClick={copyPdfUrl}
+            style={{
+              padding: "10px 18px",
+              border: "1px solid #ddd",
+              borderRadius: 8,
+              background: "#fff",
+            }}
+          >
+            {copied ? "Copied PDF URL!" : "Copy PDF URL"}
+          </button>
+        </div>
+      )}
     </div>
   );
 }
