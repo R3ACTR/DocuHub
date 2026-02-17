@@ -21,8 +21,6 @@ type DownloadItem = {
   name: string;
 };
 
-<<<<<<< HEAD
-=======
 type CompressionApiResponse = {
   status: "no_target" | "target_reached" | "target_unreachable";
   targetBytes: number | null;
@@ -37,8 +35,6 @@ type CompressionApiResponse = {
   outputBase64: string;
   error?: string;
 };
-
->>>>>>> upstream/main
 const SUPPORTED_PROCESSING_TOOLS = new Set([
   "ocr",
   "pdf-protect",
@@ -90,15 +86,6 @@ export default function ProcessingPage() {
     };
   }, [downloadItems]);
 
-<<<<<<< HEAD
-  useEffect(() => {
-    return () => {
-      downloadItems.forEach((item) => URL.revokeObjectURL(item.url));
-    };
-  }, [downloadItems]);
-
-=======
->>>>>>> upstream/main
   useEffect(() => {
     const run = async () => {
       const stored = getStoredFiles() as StoredFile[];
@@ -181,28 +168,6 @@ export default function ProcessingPage() {
     setStage("Preparing file...");
     setProgress(20);
 
-<<<<<<< HEAD
-    const structuralSource = new Uint8Array(sourceBytes);
-    structuralSource.set(sourceBytes);
-
-    const level = getCompressionLevelFromState();
-    setStage(`Compressing PDF (${level})...`);
-    setProgress(45);
-
-    const compressed =
-      level === "low"
-        ? await structuralCompressPdf(structuralSource)
-        : await rasterCompressPdf(file, new Uint8Array(sourceBytes), level);
-
-    const finalBytes =
-      compressed.length < sourceBytes.length
-        ? compressed
-        : await structuralCompressPdf(structuralSource);
-
-    setStage("Finalizing...");
-    setProgress(85);
-    setCompressedSize(finalBytes.length);
-=======
     const level = getCompressionLevelFromState();
     const targetBytes = getCompressionTargetBytesFromState();
     setCompressionTargetBytes(targetBytes);
@@ -245,7 +210,6 @@ export default function ProcessingPage() {
     setStage("Finalizing...");
     setProgress(85);
     setCompressedSize(result.compressedBytes || finalBytes.length);
->>>>>>> upstream/main
     setDownloadItems([
       {
         url: makeBlobUrl(finalBytes, "application/pdf"),
@@ -696,87 +660,6 @@ export default function ProcessingPage() {
     setStatus("done");
   };
 
-<<<<<<< HEAD
-  const structuralCompressPdf = async (bytes: Uint8Array) => {
-    const sourcePdf = await PDFDocument.load(bytes);
-    const outputPdf = await PDFDocument.create();
-    const pages = await outputPdf.copyPages(sourcePdf, sourcePdf.getPageIndices());
-    pages.forEach((page) => outputPdf.addPage(page));
-
-    return outputPdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 20,
-    });
-  };
-
-  const rasterCompressPdf = async (
-    file: StoredFile,
-    bytes: Uint8Array,
-    level: "medium" | "high"
-  ) => {
-    const loadingTask = await loadPdfJsDocument(bytes, file.name);
-    const inputPdf = loadingTask;
-    const outputPdf = await PDFDocument.create();
-    const renderScale = level === "high" ? 1.0 : 1.25;
-    const jpegQuality = level === "high" ? 0.55 : 0.72;
-
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d", { alpha: false });
-    if (!context) {
-      throw new Error("Canvas context is unavailable.");
-    }
-
-    for (let pageNumber = 1; pageNumber <= inputPdf.numPages; pageNumber++) {
-      setStage(`Compressing page ${pageNumber}/${inputPdf.numPages}...`);
-      setProgress(45 + Math.round((pageNumber / inputPdf.numPages) * 35));
-
-      const page = await inputPdf.getPage(pageNumber);
-      const baseViewport = page.getViewport({ scale: 1 });
-      const renderViewport = page.getViewport({ scale: renderScale });
-
-      canvas.width = Math.max(1, Math.floor(renderViewport.width));
-      canvas.height = Math.max(1, Math.floor(renderViewport.height));
-      context.fillStyle = "#ffffff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-
-      await page.render({
-        canvasContext: context,
-        viewport: renderViewport,
-      }).promise;
-
-      const jpegBlob = await new Promise<Blob>((resolve, reject) => {
-        canvas.toBlob(
-          (blob) => (blob ? resolve(blob) : reject(new Error("Image encoding failed"))),
-          "image/jpeg",
-          jpegQuality
-        );
-      });
-
-      const jpgBytes = new Uint8Array(await jpegBlob.arrayBuffer());
-      const image = await outputPdf.embedJpg(jpgBytes);
-      const outPage = outputPdf.addPage([baseViewport.width, baseViewport.height]);
-      outPage.drawImage(image, {
-        x: 0,
-        y: 0,
-        width: baseViewport.width,
-        height: baseViewport.height,
-      });
-    }
-
-    canvas.width = 0;
-    canvas.height = 0;
-    await inputPdf.destroy();
-
-    return outputPdf.save({
-      useObjectStreams: true,
-      addDefaultPage: false,
-      objectsPerTick: 20,
-    });
-  };
-
-=======
->>>>>>> upstream/main
   const readPdfBytes = async (file: StoredFile) => {
     const primary = await readRawBytes(file);
     try {
@@ -852,8 +735,6 @@ export default function ProcessingPage() {
     return "medium";
   };
 
-<<<<<<< HEAD
-=======
   const getCompressionTargetBytesFromState = () => {
     const raw = localStorage.getItem("compressionTargetBytes") || localStorage.getItem("targetBytes");
     if (!raw) return null;
@@ -861,8 +742,6 @@ export default function ProcessingPage() {
     if (!Number.isFinite(parsed) || parsed <= 0) return null;
     return parsed;
   };
-
->>>>>>> upstream/main
   const parsePageSelection = (input: string, totalPages: number) => {
     const allPages = new Set<number>();
     for (let i = 1; i <= totalPages; i++) allPages.add(i);
@@ -1033,10 +912,15 @@ export default function ProcessingPage() {
         )}
 
         {toolId === "ocr" && (
-          <button onClick={copyText} className="mt-4 px-6 py-3 border rounded-lg">
-            <Copy className="inline w-4 h-4 mr-2" />
-            {copied ? "Copied!" : "Copy Text"}
-          </button>
+          <div className="mt-4 max-w-3xl">
+            <div className="rounded-lg border bg-gray-50 p-4 text-left text-sm whitespace-pre-wrap max-h-72 overflow-auto">
+              {text || "No text was extracted."}
+            </div>
+            <button onClick={copyText} className="mt-4 px-6 py-3 border rounded-lg">
+              <Copy className="inline w-4 h-4 mr-2" />
+              {copied ? "Copied!" : "Copy Text"}
+            </button>
+          </div>
         )}
       </div>
     </div>

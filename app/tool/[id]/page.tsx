@@ -3,10 +3,8 @@
 import {
   ArrowLeft,
   Upload,
-  Loader2,
   FileText,
   Image as ImageIcon,
-  CheckCircle,
   ArrowLeftRight,
   ScanText,
   Shield,
@@ -21,7 +19,6 @@ import { clearStoredFiles, storeFiles } from "@/lib/fileStore";
 
 import {
   saveToolState,
-  loadToolState,
   clearToolState,
 } from "@/lib/toolStateStorage";
 
@@ -108,7 +105,6 @@ export default function ToolUploadPage() {
 
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasUnsavedWork, setHasUnsavedWork] = useState(false);
 
@@ -129,26 +125,12 @@ export default function ToolUploadPage() {
   const [extractImageFormat, setExtractImageFormat] = useState<"png" | "jpg">(
     "png",
   );
-  const [redactionStrategy, setRedactionStrategy] =
-    useState<"flatten">("flatten");
 
   const [rotateConfig, setRotateConfig] = useState({ angle: 90, pages: "" });
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  const [persistedFileMeta, setPersistedFileMeta] = useState<{
-    name: string;
-    size: number;
-    type: string;
-  } | null>(null);
-
-  useEffect(() => {
-    if (!toolId) return;
-    const stored = loadToolState(toolId);
-    if (stored?.fileMeta) setPersistedFileMeta(stored.fileMeta);
-  }, [toolId]);
 
   useEffect(() => {
     if (!toolId || !selectedFiles.length) return;
@@ -170,18 +152,82 @@ export default function ToolUploadPage() {
   }, [hasUnsavedWork]);
 
   useEffect(() => {
-    if (toolId !== "pdf-compress") return;
+    if (!toolId) return;
 
-    const savedLevel = localStorage.getItem("compressionLevel");
-    if (savedLevel === "low" || savedLevel === "medium" || savedLevel === "high") {
-      setCompressionLevel(savedLevel);
+    if (toolId === "pdf-compress") {
+      const savedLevel = localStorage.getItem("compressionLevel");
+      if (
+        savedLevel === "low" ||
+        savedLevel === "medium" ||
+        savedLevel === "high"
+      ) {
+        setCompressionLevel(savedLevel);
+      }
+
+      const savedTarget =
+        localStorage.getItem("compressionTargetBytes") ||
+        localStorage.getItem("targetBytes") ||
+        "";
+      setCompressionTargetBytesInput(savedTarget);
+      return;
     }
 
-    const savedTarget =
-      localStorage.getItem("compressionTargetBytes") ||
-      localStorage.getItem("targetBytes") ||
-      "";
-    setCompressionTargetBytesInput(savedTarget);
+    if (toolId === "pdf-watermark") {
+      setWatermarkText(localStorage.getItem("watermarkText") || "");
+      setRotationAngle(Number(localStorage.getItem("watermarkRotation") || 45));
+      setOpacity(Number(localStorage.getItem("watermarkOpacity") || 40));
+      return;
+    }
+
+    if (toolId === "pdf-delete-pages") {
+      setDeletePagesInput(localStorage.getItem("pdfDeletePages") || "");
+      return;
+    }
+
+    if (toolId === "pdf-page-reorder") {
+      setReorderPagesInput(localStorage.getItem("pdfReorderPages") || "");
+      return;
+    }
+
+    if (toolId === "pdf-extract-images") {
+      const savedFormat = localStorage.getItem("pdfExtractImageFormat");
+      setExtractImageFormat(savedFormat === "jpg" ? "jpg" : "png");
+      return;
+    }
+
+    if (toolId === "pdf-page-numbers") {
+      const savedFormat = localStorage.getItem("pageNumberFormat");
+      if (savedFormat === "numeric" || savedFormat === "Roman" || savedFormat === "letter") {
+        setPageNumberFormat(savedFormat);
+      }
+
+      const savedFontSize = Number.parseInt(
+        localStorage.getItem("pageNumberFontSize") || "14",
+        10,
+      );
+      if (Number.isFinite(savedFontSize) && savedFontSize > 0) {
+        setPageNumberFontSize(savedFontSize);
+      }
+      return;
+    }
+
+    if (toolId === "pdf-rotate") {
+      const rawConfig = localStorage.getItem("pdfRotateConfig");
+      if (!rawConfig) return;
+      try {
+        const parsed = JSON.parse(rawConfig) as { angle?: number; pages?: string };
+        const nextAngle =
+          parsed.angle === 90 || parsed.angle === 180 || parsed.angle === 270
+            ? parsed.angle
+            : 90;
+        setRotateConfig({
+          angle: nextAngle,
+          pages: typeof parsed.pages === "string" ? parsed.pages : "",
+        });
+      } catch {
+        setRotateConfig({ angle: 90, pages: "" });
+      }
+    }
   }, [toolId]);
 
   const getSupportedTypes = () => {
@@ -195,14 +241,6 @@ export default function ToolUploadPage() {
       default:
         return [".pdf"];
     }
-  };
-
-  const getFileIcon = (file: File) => {
-    const ext = file.name.split(".").pop()?.toLowerCase();
-    if (ext === "pdf") return <FileText className="w-6 h-6 text-red-500" />;
-    if (["jpg", "jpeg", "png"].includes(ext || ""))
-      return <ImageIcon className="w-6 h-6 text-blue-500" />;
-    return <FileText className="w-6 h-6 text-gray-400" />;
   };
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -247,6 +285,15 @@ export default function ToolUploadPage() {
       return setFileError("Enter password.");
     if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())
       return setFileError("Enter password.");
+    if (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) {
+      return setFileError("Enter pages to delete.");
+    }
+    if (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) {
+      return setFileError("Enter page order.");
+    }
+    if (toolId === "pdf-watermark" && !watermarkText.trim()) {
+      return setFileError("Enter watermark text.");
+    }
 
     if (toolId === "pdf-compress") {
       localStorage.setItem("compressionLevel", compressionLevel);
@@ -258,6 +305,33 @@ export default function ToolUploadPage() {
         localStorage.removeItem("compressionTargetBytes");
         localStorage.removeItem("targetBytes");
       }
+    }
+
+    if (toolId === "pdf-watermark") {
+      localStorage.setItem("watermarkText", watermarkText.trim());
+      localStorage.setItem("watermarkRotation", String(rotationAngle));
+      localStorage.setItem("watermarkOpacity", String(opacity));
+    }
+
+    if (toolId === "pdf-delete-pages") {
+      localStorage.setItem("pdfDeletePages", deletePagesInput.trim());
+    }
+
+    if (toolId === "pdf-page-reorder") {
+      localStorage.setItem("pdfReorderPages", reorderPagesInput.trim());
+    }
+
+    if (toolId === "pdf-extract-images") {
+      localStorage.setItem("pdfExtractImageFormat", extractImageFormat);
+    }
+
+    if (toolId === "pdf-page-numbers") {
+      localStorage.setItem("pageNumberFormat", pageNumberFormat);
+      localStorage.setItem("pageNumberFontSize", String(pageNumberFontSize));
+    }
+
+    if (toolId === "pdf-rotate") {
+      localStorage.setItem("pdfRotateConfig", JSON.stringify(rotateConfig));
     }
 
 
@@ -411,8 +485,6 @@ export default function ToolUploadPage() {
         <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>
 
 
-        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
-
         {toolId === "pdf-compress" && (
           <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
             <div>
@@ -450,7 +522,203 @@ export default function ToolUploadPage() {
             </div>
           </div>
         )}
- upstream/main
+
+        {(toolId === "pdf-protect" || toolId === "pdf-password-remover") && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4">
+            <label className="block text-sm font-medium mb-2">
+              Password
+            </label>
+            <input
+              type="password"
+              value={
+                toolId === "pdf-protect"
+                  ? protectPassword
+                  : passwordRemoverPassword
+              }
+              onChange={(e) =>
+                toolId === "pdf-protect"
+                  ? setProtectPassword(e.target.value)
+                  : setPasswordRemoverPassword(e.target.value)
+              }
+              placeholder="Enter password"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+          </div>
+        )}
+
+        {toolId === "pdf-watermark" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Watermark Text
+              </label>
+              <input
+                type="text"
+                value={watermarkText}
+                onChange={(e) => setWatermarkText(e.target.value)}
+                placeholder="Confidential"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rotation ({rotationAngle} degrees)
+              </label>
+              <input
+                type="range"
+                min={-180}
+                max={180}
+                step={1}
+                value={rotationAngle}
+                onChange={(e) => setRotationAngle(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Opacity ({opacity}%)
+              </label>
+              <input
+                type="range"
+                min={5}
+                max={100}
+                step={1}
+                value={opacity}
+                onChange={(e) => setOpacity(Number(e.target.value))}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
+
+        {toolId === "pdf-delete-pages" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4">
+            <label className="block text-sm font-medium mb-2">
+              Pages to Delete
+            </label>
+            <input
+              type="text"
+              value={deletePagesInput}
+              onChange={(e) => setDeletePagesInput(e.target.value)}
+              placeholder="e.g. 2,4-6"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Use comma-separated pages or ranges.
+            </p>
+          </div>
+        )}
+
+        {toolId === "pdf-page-reorder" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4">
+            <label className="block text-sm font-medium mb-2">
+              New Page Order
+            </label>
+            <input
+              type="text"
+              value={reorderPagesInput}
+              onChange={(e) => setReorderPagesInput(e.target.value)}
+              placeholder="e.g. 3,1,2"
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Provide each page exactly once.
+            </p>
+          </div>
+        )}
+
+        {toolId === "pdf-extract-images" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4">
+            <label className="block text-sm font-medium mb-2">
+              Export Format
+            </label>
+            <select
+              value={extractImageFormat}
+              onChange={(e) =>
+                setExtractImageFormat(e.target.value === "jpg" ? "jpg" : "png")
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+            >
+              <option value="png">PNG</option>
+              <option value="jpg">JPG</option>
+            </select>
+          </div>
+        )}
+
+        {toolId === "pdf-page-numbers" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Number Format
+              </label>
+              <select
+                value={pageNumberFormat}
+                onChange={(e) => setPageNumberFormat(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="numeric">1, 2, 3</option>
+                <option value="Roman">I, II, III</option>
+                <option value="letter">A, B, C</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Font Size
+              </label>
+              <input
+                type="number"
+                min={8}
+                max={72}
+                value={pageNumberFontSize}
+                onChange={(e) => {
+                  const next = Number.parseInt(e.target.value, 10);
+                  if (Number.isFinite(next)) {
+                    setPageNumberFontSize(Math.min(72, Math.max(8, next)));
+                  }
+                }}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        )}
+
+        {toolId === "pdf-rotate" && (
+          <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Rotation Angle
+              </label>
+              <select
+                value={String(rotateConfig.angle)}
+                onChange={(e) =>
+                  setRotateConfig((prev) => ({
+                    ...prev,
+                    angle: Number(e.target.value),
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="90">90 degrees</option>
+                <option value="180">180 degrees</option>
+                <option value="270">270 degrees</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-2">
+                Pages to Rotate (Optional)
+              </label>
+              <input
+                type="text"
+                value={rotateConfig.pages}
+                onChange={(e) =>
+                  setRotateConfig((prev) => ({ ...prev, pages: e.target.value }))
+                }
+                placeholder="Leave blank for all pages (e.g. 1,3-5)"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              />
+            </div>
+          </div>
+        )}
 
         {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
 
@@ -460,6 +728,9 @@ export default function ToolUploadPage() {
             !selectedFiles.length ||
             isProcessing ||
             (toolId === "pdf-protect" && !protectPassword.trim()) ||
+            (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||
+            (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) ||
+            (toolId === "pdf-watermark" && !watermarkText.trim()) ||
             (toolId === "pdf-password-remover" &&
               !passwordRemoverPassword.trim())
           }
