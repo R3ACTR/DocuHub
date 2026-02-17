@@ -135,7 +135,6 @@ export default function PdfSplitPage() {
           Upload a PDF and choose pages to split
         </p>
 
-        {/* ✅ REQUIRED ADDED HERE */}
         <input
           type="file"
           accept="application/pdf"
@@ -147,9 +146,17 @@ export default function PdfSplitPage() {
           className="mx-auto block"
         />
 
+        {/* ✅ File Count */}
         <p className="text-sm text-gray-500 mt-2">
           {files.length} file selected
         </p>
+
+        {/* ✅ NEW — File Size Near Upload Area */}
+        {files.length > 0 && (
+          <p className="text-xs text-gray-500 mt-1">
+            Size: {formatFileSize(files[0].size)}
+          </p>
+        )}
       </div>
 
       {/* Empty State */}
@@ -205,7 +212,7 @@ export default function PdfSplitPage() {
         className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
       />
 
-      {/* ✅ UPDATED BUTTON DISABLE LOGIC */}
+      {/* Split Button */}
       <button
         onClick={handleSplit}
         disabled={loading || !files.length || !pageRange}
