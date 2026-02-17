@@ -24,7 +24,7 @@ import { FileUp, Trash2, Combine, FileText, Loader2 } from 'lucide-react';
 interface FileWithId {
   id: string;
   file: File;
-  uploadedAt: number; // ✅ ADDED
+  uploadedAt: number;
 }
 
 export default function PdfMergePage() {
@@ -32,9 +32,8 @@ export default function PdfMergePage() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
-  const [, forceUpdate] = useState(0); // ✅ For time refresh
+  const [, forceUpdate] = useState(0);
 
-  /* ---------- Time Formatter ---------- */
   const getRelativeTime = (timestamp: number) => {
     const diff = Date.now() - timestamp;
     const sec = Math.floor(diff / 1000);
@@ -49,23 +48,20 @@ export default function PdfMergePage() {
     return `Uploaded ${hr} hr ago`;
   };
 
-  /* ---------- Auto Refresh Time Text ---------- */
   useEffect(() => {
     const interval = setInterval(() => {
       forceUpdate((n) => n + 1);
     }, 30000);
-
     return () => clearInterval(interval);
   }, []);
 
-  /* ---------- Replace File ---------- */
   const replaceFile = (idToReplace: string, newFile: File) => {
     if (newFile.type !== 'application/pdf') return;
 
     setFilesWithIds((prev) =>
       prev.map((item) =>
         item.id === idToReplace
-          ? { ...item, file: newFile, uploadedAt: Date.now() } // ✅ update time
+          ? { ...item, file: newFile, uploadedAt: Date.now() }
           : item
       )
     );
@@ -98,7 +94,7 @@ export default function PdfMergePage() {
     const newFiles = droppedFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
-      uploadedAt: Date.now(), // ✅ ADDED
+      uploadedAt: Date.now(),
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
@@ -114,7 +110,7 @@ export default function PdfMergePage() {
     const newFiles = selectedFiles.map((file) => ({
       id: Math.random().toString(36).substr(2, 9),
       file,
-      uploadedAt: Date.now(), // ✅ ADDED
+      uploadedAt: Date.now(),
     }));
 
     setFilesWithIds((prev) => [...prev, ...newFiles]);
@@ -125,7 +121,16 @@ export default function PdfMergePage() {
     setFilesWithIds((prev) => prev.filter((item) => item.id !== idToRemove));
   };
 
-  const clearAll = () => setFilesWithIds([]);
+  /* ✅ ONLY CHANGE MADE HERE */
+  const clearAll = () => {
+    const confirmClear = window.confirm(
+      "Are you sure you want to remove all uploaded files?"
+    );
+
+    if (confirmClear) {
+      setFilesWithIds([]);
+    }
+  };
 
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
@@ -298,7 +303,7 @@ export default function PdfMergePage() {
                       id={item.id}
                       file={item.file}
                       index={index}
-                      uploadedTime={getRelativeTime(item.uploadedAt)} // ✅ PASS TIME
+                      uploadedTime={getRelativeTime(item.uploadedAt)}
                       onRemove={() => removeFile(item.id)}
                     />
 
@@ -346,3 +351,4 @@ export default function PdfMergePage() {
     </div>
   );
 }
+
