@@ -19,7 +19,15 @@ import {
 } from '@dnd-kit/sortable';
 import { restrictToVerticalAxis } from '@dnd-kit/modifiers';
 import { SortablePdfItem } from '@/components/SortablePdfItem';
-import { FileUp, Trash2, Combine, FileText, Loader2 } from 'lucide-react';
+import {
+  FileUp,
+  Trash2,
+  Combine,
+  FileText,
+  Loader2,
+  Download,
+  Printer,
+} from 'lucide-react';
 
 interface FileWithId {
   id: string;
@@ -32,6 +40,7 @@ export default function PdfMergePage() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [mergedPdfUrl, setMergedPdfUrl] = useState('');
   const [, forceUpdate] = useState(0);
 
   const getRelativeTime = (timestamp: number) => {
@@ -54,6 +63,14 @@ export default function PdfMergePage() {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (mergedPdfUrl) {
+        URL.revokeObjectURL(mergedPdfUrl);
+      }
+    };
+  }, [mergedPdfUrl]);
 
   const replaceFile = (idToReplace: string, newFile: File) => {
     if (newFile.type !== 'application/pdf') return;
@@ -143,6 +160,40 @@ export default function PdfMergePage() {
     }
   };
 
+  const handleDownloadMerged = () => {
+    if (!mergedPdfUrl) return;
+
+    const a = document.createElement('a');
+    a.href = mergedPdfUrl;
+    a.download = 'merged.pdf';
+    a.click();
+  };
+
+  const handlePrintMerged = () => {
+    if (!mergedPdfUrl) return;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.src = mergedPdfUrl;
+
+    iframe.onload = () => {
+      const frameWindow = iframe.contentWindow;
+      if (!frameWindow) return;
+      frameWindow.focus();
+      frameWindow.print();
+    };
+
+    document.body.appendChild(iframe);
+    setTimeout(() => {
+      document.body.removeChild(iframe);
+    }, 5000);
+  };
+
   const handleMerge = async () => {
     if (filesWithIds.length < 2) {
       alert('Please select at least 2 PDF files');
@@ -174,11 +225,14 @@ export default function PdfMergePage() {
       });
 
       const url = URL.createObjectURL(blob);
+      if (mergedPdfUrl) {
+        URL.revokeObjectURL(mergedPdfUrl);
+      }
+      setMergedPdfUrl(url);
       const a = document.createElement('a');
       a.href = url;
       a.download = 'merged.pdf';
       a.click();
-      URL.revokeObjectURL(url);
 
       setUploadProgress(100);
     } catch (err) {
@@ -303,6 +357,25 @@ export default function PdfMergePage() {
               )}
             </button>
           </div>
+
+          {mergedPdfUrl && !loading && (
+            <div className="pt-3 flex justify-center gap-3">
+              <button
+                onClick={handleDownloadMerged}
+                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
+              >
+                <Download className="w-4 h-4" />
+                Download
+              </button>
+              <button
+                onClick={handlePrintMerged}
+                className="flex items-center gap-2 px-5 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200"
+              >
+                <Printer className="w-4 h-4" />
+                Print
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
