@@ -11,6 +11,14 @@ export async function storeFiles(
   options?: { password?: string }
 ): Promise<boolean> {
   try {
+    // ✅ MAX FILE COUNT LIMIT
+    const MAX_FILES = 10;
+
+    if (files.length > MAX_FILES) {
+      alert(`You can upload a maximum of ${MAX_FILES} files.`);
+      return false;
+    }
+
     const results = await Promise.all(
       files.map(
         (file) =>
