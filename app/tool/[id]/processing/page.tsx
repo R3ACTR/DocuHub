@@ -8,6 +8,7 @@ import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
 import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { protectPdfBytes } from "@/lib/pdfProtection";
 import ToolFeedbackPrompt from "@/components/ToolFeedbackPrompt";
+import { toolToast } from "@/lib/toolToasts";
 
 type StoredFile = {
   data: string;
@@ -80,6 +81,7 @@ export default function ProcessingPage() {
     "direct",
   );
   const [compressionUsesObjectStreams, setCompressionUsesObjectStreams] = useState(false);
+  const [hasShownResultToast, setHasShownResultToast] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -92,12 +94,15 @@ export default function ProcessingPage() {
       const stored = getStoredFiles() as StoredFile[];
 
       if (!SUPPORTED_PROCESSING_TOOLS.has(toolId)) {
-        setError(`Unsupported tool "${toolId}". Please choose an available tool from the dashboard.`);
+        const message = `Unsupported tool "${toolId}". Please choose an available tool from the dashboard.`;
+        setError(message);
+        toolToast.warning("Unsupported tool. Please select an available tool.");
         setStatus("error");
         return;
       }
 
       if (!stored?.length) {
+        toolToast.info("No file found. Please upload again.");
         router.push(`/tool/${toolId}`);
         return;
       }
@@ -136,7 +141,9 @@ export default function ProcessingPage() {
         }
       } catch (e) {
         console.error(e);
-        setError(e instanceof Error ? e.message : "Processing failed");
+        const message = e instanceof Error ? e.message : "Processing failed.";
+        setError(message);
+        toolToast.error(message);
         setStatus("error");
       } finally {
         clearStoredFiles();
@@ -207,6 +214,9 @@ export default function ProcessingPage() {
     setCompressionLevelUsed(result.settings?.appliedLevel || level);
     setCompressionRewriteMode(result.settings?.rewriteMode || "direct");
     setCompressionUsesObjectStreams(Boolean(result.settings?.useObjectStreams));
+    if (result.status === "target_unreachable") {
+      toolToast.warning("Target size was not reached. Downloading the closest result.");
+    }
 
     setStage("Finalizing...");
     setProgress(85);
@@ -814,19 +824,36 @@ export default function ProcessingPage() {
     anchor.href = item.url;
     anchor.download = item.name || `result-${index + 1}.pdf`;
     anchor.click();
+    toolToast.success("Download started.");
   };
 
   const copyText = async () => {
     await navigator.clipboard.writeText(text);
+    toolToast.info("Copied text to clipboard.");
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   const copyDownloadUrl = async (item: DownloadItem, index: number) => {
     await navigator.clipboard.writeText(item.url);
+    toolToast.info("Copied download link to clipboard.");
     setCopiedDownloadIndex(index);
     setTimeout(() => setCopiedDownloadIndex(null), 1500);
   };
+
+  useEffect(() => {
+    if (status !== "done" || hasShownResultToast) return;
+    if (downloadItems.length > 0) {
+      toolToast.success(
+        downloadItems.length === 1
+          ? "File is ready for download."
+          : `${downloadItems.length} files are ready for download.`,
+      );
+    } else {
+      toolToast.success("Processing completed successfully.");
+    }
+    setHasShownResultToast(true);
+  }, [status, downloadItems, hasShownResultToast]);
 
   if (status === "processing") {
     return (

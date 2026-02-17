@@ -2,15 +2,13 @@
 
 import { useState } from "react";
 import { PDFDocument } from "pdf-lib";
+import { toolToast } from "@/lib/toolToasts";
 
 export default function PdfSplitPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [pageRange, setPageRange] = useState("");
-
-  /* ✅ SUCCESS STATE */
-  const [successMsg, setSuccessMsg] = useState("");
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
@@ -37,15 +35,25 @@ export default function PdfSplitPage() {
       (file) => file.type === "application/pdf"
     );
 
-    if (!droppedFiles.length) return;
+    if (!droppedFiles.length) {
+      toolToast.warning("Unsupported format. Please upload a PDF file.");
+      return;
+    }
     setFiles([droppedFiles[0]]);
   };
 
   const handleSplit = async () => {
-    if (!files.length) return alert("Please select a PDF file");
-    if (!pageRange) return alert("Please enter page range");
+    if (!files.length) {
+      toolToast.warning("Please select a PDF file.");
+      return;
+    }
+    if (!pageRange) {
+      toolToast.warning("Please enter a page range.");
+      return;
+    }
 
     setLoading(true);
+    toolToast.info("Splitting PDF...");
 
     try {
       const file = files[0];
@@ -65,7 +73,8 @@ export default function PdfSplitPage() {
           end > pdf.getPageCount()
         ) {
           setLoading(false);
-          return alert("Invalid page range");
+          toolToast.warning("Invalid page range.");
+          return;
         }
 
         for (let i = start; i <= end; i++) {
@@ -80,7 +89,8 @@ export default function PdfSplitPage() {
           page > pdf.getPageCount()
         ) {
           setLoading(false);
-          return alert("Invalid page number");
+          toolToast.warning("Invalid page number.");
+          return;
         }
 
         pagesToExtract.push(page - 1);
@@ -104,13 +114,11 @@ export default function PdfSplitPage() {
 
       URL.revokeObjectURL(url);
 
-      /* ✅ SUCCESS MESSAGE */
-      setSuccessMsg("✅ File downloaded successfully");
-      setTimeout(() => setSuccessMsg(""), 3000);
+      toolToast.success("File is ready for download.");
 
     } catch (err) {
       console.error(err);
-      alert("Failed to split PDF");
+      toolToast.error("Processing failed. Could not split PDF.");
     } finally {
       setLoading(false);
     }
@@ -141,7 +149,12 @@ export default function PdfSplitPage() {
           required
           onChange={(e) => {
             if (!e.target.files) return;
-            setFiles([e.target.files[0]]);
+            const file = e.target.files[0];
+            if (file.type !== "application/pdf") {
+              toolToast.warning("Unsupported format. Please upload a PDF file.");
+              return;
+            }
+            setFiles([file]);
           }}
           className="mx-auto block"
         />
@@ -224,13 +237,6 @@ export default function PdfSplitPage() {
       >
         {loading ? "Splitting PDF..." : "Split PDF"}
       </button>
-
-      {/* Success Message */}
-      {successMsg && (
-        <p className="text-success text-sm mt-4 text-center font-medium">
-          {successMsg}
-        </p>
-      )}
 
     </div>
   );

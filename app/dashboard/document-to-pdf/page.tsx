@@ -4,6 +4,7 @@
   import { PDFDocument, StandardFonts } from "pdf-lib";                                                                                                         
   import type { PDFFont } from "pdf-lib";                                                                                                                       
   import * as mammoth from "mammoth";                                                                                                                           
+  import { toolToast } from "@/lib/toolToasts";
                                                                                                                                                                 
   function sanitizeForWinAnsi(text: string, font: PDFFont) {                                                                                                    
     let result = "";                                                                                                                                            
@@ -64,7 +65,9 @@
       }                                                                                                                                                         
                                                                                                                                                                 
       if (!validFiles.length) {                                                                                                                                 
-        setError("Unsupported file type. Please upload: .txt, .html, .json, .docx");                                                                            
+        const message = "Unsupported file type. Please upload: .txt, .html, .json, .docx";
+        setError(message);
+        toolToast.warning("Unsupported format. Use TXT, HTML, JSON, or DOCX.");
         return;                                                                                                                                                 
       }                                                                                                                                                         
                                                                                                                                                                 
@@ -82,12 +85,12 @@
       });                                                                                                                                                       
                                                                                                                                                                 
       if (invalidFileNames.length) {                                                                                                                            
-        setError(
-          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`                                                 
-        );                                                                                                                                                      
+        const message = `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`;
+        setError(message);
+        toolToast.warning("Some files were skipped. Use TXT, HTML, JSON, or DOCX.");
         return;                                                                                                                                                 
       }                                                                                                                                                         
-                                                                                                                                                                
+
       setError("");                                                                                                                                             
     };                                                                                                                                                          
                                                                                                                                                                 
@@ -191,9 +194,10 @@
                                                                                                                                                                 
     const handleConvert = async () => {                                                                                                                         
       if (!files.length) return;                                                                                                                                
-                                                                                                                                                                
+
       setLoading(true);                                                                                                                                         
       setError("");                                                                                                                                             
+      toolToast.info("Converting document to PDF...");
                                                                                                                                                                 
       try {                                                                                                                                                     
         const conversionResults = await Promise.all(                                                                                                            
@@ -207,9 +211,15 @@
           downloadPdf(pdfBytes, file.name);                                                                                                                     
           saveRecentFile(file.name, "Document to PDF");                                                                                                         
         }                                                                                                                                                       
+        toolToast.success(
+          conversionResults.length === 1
+            ? "File is ready for download."
+            : `${conversionResults.length} files are ready for download.`
+        );
       } catch (err) {                                                                                                                                           
         console.error(err);                                                                                                                                     
-        setError("Conversion failed");                                                                                                                          
+        setError("Conversion failed");
+        toolToast.error("Processing failed. Conversion could not be completed.");
       } finally {
         setLoading(false);                                                                                                                                      
       }                                                                                                                                                         
