@@ -70,8 +70,8 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
 
   return (
 <div
-  className={`relative flex items-center justify-center bg-gray-100 rounded border overflow-hidden
-    ${error ? "border-destructive" : "border-gray-200"}
+  className={`relative flex items-center justify-center bg-muted rounded border overflow-hidden
+    ${error ? "border-destructive" : "border-border"}
     ${className}`}
 >
       {loading && (
@@ -80,10 +80,11 @@ export function PdfThumbnail({ file, className }: PdfThumbnailProps) {
         </div>
       )}
       {error ? (
-        <div className="text-xs text-gray-400">Preview N/A</div>
+        <div className="text-xs text-muted-foreground">Preview N/A</div>
       ) : (
         <canvas ref={canvasRef} className="max-w-full max-h-full object-contain" />
       )}
     </div>
   );
 }
+

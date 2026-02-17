@@ -40,12 +40,12 @@ export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: Sor
     <div
       ref={setNodeRef}
       style={style}
-      className={`group flex items-center gap-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow ${isDragging ? 'shadow-lg border-indigo-300' : ''}`}
+      className={`group flex items-center gap-4 p-4 bg-card border border-border rounded-xl shadow-sm hover:shadow-md transition-shadow ${isDragging ? 'shadow-lg border-accent' : ''}`}
     >
       <div
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-gray-600 transition-colors"
+        className="cursor-grab active:cursor-grabbing p-1 text-muted-foreground hover:text-foreground transition-colors"
       >
         <GripVertical className="w-5 h-5" />
       </div>
@@ -57,26 +57,26 @@ export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: Sor
       {/* ✅ IMPORTANT: min-w-0 keeps truncate working inside flex */}
       <div className="flex-grow min-w-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
+          <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 bg-accent/15 text-accent rounded-full text-xs font-bold">
             {index + 1}
           </span>
 
           {/* ✅ FINAL TRUNCATE + TOOLTIP */}
           <p
-            className="font-medium text-gray-900 truncate max-w-full"
+            className="font-medium text-foreground truncate max-w-full"
             title={file.name}
           >
             {file.name}
           </p>
         </div>
 
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           {formatFileSize(file.size)}
         </p>
 
         {/* ✅ ADDED TIMESTAMP DISPLAY */}
         {uploadedTime && (
-          <p className="text-xs text-gray-400 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             {uploadedTime}
           </p>
         )}
@@ -85,7 +85,7 @@ export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: Sor
       {/* ✅ Updated Remove Button (Icon + Text) */}
       <button
         onClick={onRemove}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-danger hover:opacity-80 hover:bg-danger/10 rounded-lg transition-all"
         title="Remove file"
       >
         <Trash2 className="w-4 h-4" />
@@ -94,3 +94,4 @@ export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: Sor
     </div>
   );
 }
+

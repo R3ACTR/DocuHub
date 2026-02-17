@@ -215,115 +215,80 @@
       }                                                                                                                                                         
     };                                                                                                                                                          
                                                                                                                                                                 
-    return (                                                                                                                                                    
-      <div style={{ maxWidth: 650, margin: "40px auto" }}>                                                                                                      
-        <h1>Document to PDF</h1>                                                                                                                                
-                                                                                                                                                                
-        <input                                                                                                                                                  
-          ref={fileInputRef}                                                                                                                                    
-          type="file"                                                                                                                                           
-          multiple                                                                                                                                              
-          accept=".txt,.html,.json,.docx"                                                                                                                       
-          onChange={handleFileChange}                                                                                                                           
-          style={{ display: "none" }}                                                                                                                           
-        />                                                                                                                                                      
-                                                                                                                                                                
-        <div                                                                                                                                                    
-          onDrop={handleDrop}                                                                                                                                   
-          onDragOver={(e) => {                                                                                                                                  
-            e.preventDefault();                                                                                                                                 
-            setIsDragging(true);                                                                                                                                
-          }}                                                                                                                                                    
-          onDragLeave={() => setIsDragging(false)}                                                                                                              
-          onClick={() => fileInputRef.current?.click()}                                                                                                         
-          style={{                                                                                                                                              
-            marginTop: 20,                                                                                                                                      
-            padding: 40,                                                                                                                                        
-            border: isDragging ? "2px solid #4f46e5" : "2px dashed #6c63ff",                                                                                    
-            borderRadius: 12,                                                                                                                                   
-            textAlign: "center",                                                                                                                                
-            cursor: "pointer",                                                                                                                                  
-            background: isDragging ? "#eef2ff" : "#f6f7ff",                                                                                                     
-            transition: "all 0.2s ease",                                                                                                                        
+    return (
+      <div className="mx-auto my-10 max-w-2xl px-4">
+        <h1 className="text-3xl font-semibold">Document to PDF</h1>
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".txt,.html,.json,.docx"
+          onChange={handleFileChange}
+          className="hidden"
+        />
+
+        <div
+          onDrop={handleDrop}
+          onDragOver={(e) => {
+            e.preventDefault();
+            setIsDragging(true);
           }}
-        >                                                                                                                                                       
-          <p style={{ fontSize: 18 }}>                                                                                                                          
-            {isDragging ? "Drop files here" : "Drop files here or click to upload"}                                                                             
-          </p>                                                                                                                                                  
-        </div>                                                                                                                                                  
-                                                                                                                                                                
-        {error && (                                                                                                                                             
-          <p style={{ color: "red", marginTop: 10 }}>                                                                                                           
-            {error}                                                                                                                                             
-          </p>                                                                                                                                                  
-        )}                                                                                                                                                      
-                                                                                                                                                                
-        {files.length > 0 && (                                                                                                                                  
-          <>                                                                                                                                                    
-            <div style={{ marginTop: 20, display: "grid", gap: 10 }}>                                                                                           
-              {files.map((file, index) => (                                                                                                                     
-                <div                                                                                                                                            
-                  key={`${file.name}-${file.size}-${file.lastModified}`}                                                                                        
-                  style={{                                                                                                                                      
-                    padding: 12,                                                                                                                                
-                    border: "1px solid #ddd",                                                                                                                   
-                    borderRadius: 8,                                                                                                                            
-                    display: "flex",
-                    justifyContent: "space-between",                                                                                                            
-                    background: "#fafafa",                                                                                                                      
-                    gap: 12,                                                                                                                                    
-                  }}                                                                                                                                            
-                >                                                                                                                                               
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{file.name}</span>                                                             
-                                                                                                                                                                
-                  <button                                                                                                                                       
-                    onClick={() => handleRemoveFile(index)}                                                                                                     
-                    style={{                                                                                                                                    
-                      background: "#ff4d4f",                                                                                                                    
-                      color: "white",                                                                                                                           
-                      border: "none",                                                                                                                           
-                      padding: "6px 12px",                                                                                                                      
-                      borderRadius: 6,                                                                                                                          
-                    }}                                                                                                                                          
-                  >                                                                                                                                             
-                    Remove                                                                                                                                      
-                  </button>                                                                                                                                     
-                </div>                                                                                                                                          
-              ))}                                                                                                                                               
-            </div>                                                                                                                                              
-                                                                                                                                                                
-            <button                                                                                                                                             
-              onClick={clearSelection}                                                                                                                          
-              style={{                                                                                                                                          
-                marginTop: 12,                                                                                                                                  
-                background: "transparent",                                                                                                                      
-                color: "#374151",                                                                                                                               
-                border: "1px solid #d1d5db",                                                                                                                    
-                padding: "6px 12px",                                                                                                                            
-                borderRadius: 6,                                                                                                                                
-              }}                                                                                                                                                
-            >                                                                                                                                                   
-              Clear all                                                                                                                                         
-            </button>                                                                                                                                           
-          </>                                                                                                                                                   
-        )}                                                                                                                                                      
-                                                                                                                                                                
-        <br />                                                                                                                                                  
-                                                                                                                                                                
-        <button                                                                                                                                                 
-          onClick={handleConvert}                                                                                                                               
-          disabled={loading || files.length === 0}                                                                                                              
-          style={{                                                                                                                                              
-            padding: "12px 24px",                                                                                                                               
-            background: "#6c63ff",                                                                                                                              
-            color: "white",                                                                                                                                     
-            border: "none",                                                                                                                                     
-            borderRadius: 8,                                                                                                                                    
-            cursor: loading || files.length === 0 ? "not-allowed" : "pointer",                                                                                  
-          }}                                                                                                                                                    
-        >                                                                                                                                                       
-          {loading ? "Converting..." : `Convert ${files.length} file(s) to PDF`}                                                                                
-        </button>                                                                                                                                               
-      </div>                                                                                                                                                    
-    );                                                                                                                                                          
+          onDragLeave={() => setIsDragging(false)}
+          onClick={() => fileInputRef.current?.click()}
+          className={`mt-5 cursor-pointer rounded-xl border-2 p-10 text-center transition ${
+            isDragging
+              ? "border-accent bg-accent/10"
+              : "border-dashed border-border bg-muted/40"
+          }`}
+        >
+          <p className="text-lg">
+            {isDragging ? "Drop files here" : "Drop files here or click to upload"}
+          </p>
+        </div>
+
+        {error && <p className="mt-3 text-danger">{error}</p>}
+
+        {files.length > 0 && (
+          <>
+            <div className="mt-5 grid gap-3">
+              {files.map((file, index) => (
+                <div
+                  key={`${file.name}-${file.size}-${file.lastModified}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+                >
+                  <span className="truncate">{file.name}</span>
+
+                  <button
+                    onClick={() => handleRemoveFile(index)}
+                    className="rounded-md bg-danger px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={clearSelection}
+              className="mt-3 rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:bg-muted"
+            >
+              Clear all
+            </button>
+          </>
+        )}
+
+        <button
+          onClick={handleConvert}
+          disabled={loading || files.length === 0}
+          className={`mt-6 rounded-lg px-6 py-3 ${
+            loading || files.length === 0
+              ? "cursor-not-allowed bg-muted text-muted-foreground"
+              : "bg-primary text-primary-foreground hover:opacity-90"
+          }`}
+        >
+          {loading ? "Converting..." : `Convert ${files.length} file(s) to PDF`}
+        </button>
+      </div>
+    );
   }

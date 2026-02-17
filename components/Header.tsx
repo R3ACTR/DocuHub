@@ -2,37 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Shield, WifiOff, ServerOff, Moon, Sun } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Settings, Shield, WifiOff, ServerOff } from "lucide-react";
+import { useState } from "react";
 
 export function Header() {
   const pathname = usePathname();
-
-  const isHomeOrDashboard =
-    pathname === "/" || pathname === "/dashboard";
-
-  const [darkMode, setDarkMode] = useState(false);
+  const isHomeOrDashboard = pathname === "/" || pathname === "/dashboard";
   const [query, setQuery] = useState("");
-
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-    if (saved === "dark") {
-      document.documentElement.classList.add("dark");
-      setDarkMode(true);
-    }
-  }, []);
-
-  const toggleTheme = () => {
-    if (darkMode) {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-      setDarkMode(false);
-    } else {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-      setDarkMode(true);
-    }
-  };
 
   const handleSearch = () => {
     if (!query.trim()) return;
@@ -40,75 +16,60 @@ export function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-background shadow-sm border-b border-border">
-      {/* Top Header */}
-      <div className="container mx-auto px-6 md:px-12 flex items-center justify-between pt-6 pb-4">
-        
-        {/* Logo */}
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background shadow-sm">
+      <div className="container mx-auto flex items-center justify-between px-6 pb-4 pt-6 md:px-12">
         {isHomeOrDashboard && (
           <div className="flex flex-col">
             <Link href="/" className="group">
-              <span className="text-4xl font-bold text-foreground tracking-tight group-hover:opacity-80 transition-opacity">
+              <span className="text-4xl font-bold tracking-tight text-foreground transition-opacity group-hover:opacity-80">
                 DocuHub
               </span>
             </Link>
-
-            <span className="text-sm text-muted-foreground font-medium tracking-wide">
+            <span className="text-sm font-medium tracking-wide text-muted-foreground">
               Privacy-first, offline document processing
             </span>
           </div>
         )}
 
-        {/* Right Controls */}
         <div className="flex items-center gap-3">
-
-          {/* Search Bar */}
           {!isHomeOrDashboard && (
-            <div className="flex items-center border border-border rounded-lg overflow-hidden bg-card">
+            <div className="flex items-center overflow-hidden rounded-lg border border-border bg-card">
               <input
                 type="text"
                 placeholder="Search documents..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="px-3 py-1.5 bg-transparent outline-none text-sm"
+                className="bg-transparent px-3 py-1.5 text-sm outline-none"
               />
               <button
                 onClick={handleSearch}
-                className="px-3 py-1.5 border-l border-border hover:bg-muted text-sm"
+                className="border-l border-border px-3 py-1.5 text-sm hover:bg-muted"
               >
                 Search
               </button>
             </div>
           )}
 
-          {/* Theme Toggle */}
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-lg bg-card border border-border shadow hover:scale-105 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          <Link
+            href="/settings"
+            className="rounded-lg border border-border bg-card p-2 shadow transition hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            aria-label="Open settings"
           >
-            {darkMode ? (
-              <Sun className="w-5 h-5 text-primary" />
-            ) : (
-              <Moon className="w-5 h-5 text-muted-foreground" />
-            )}
-          </button>
-
+            <Settings className="h-5 w-5 text-muted-foreground" />
+          </Link>
         </div>
       </div>
 
-      {/* Banner Strip */}
-      <div className="w-full bg-muted py-2.5 border-b border-border">
-        <div className="container mx-auto px-6 md:px-12 flex flex-wrap items-center justify-center gap-6 md:gap-8 text-muted-foreground font-medium text-sm md:text-base">
+      <div className="w-full border-b border-border bg-muted py-2.5">
+        <div className="container mx-auto flex flex-wrap items-center justify-center gap-6 px-6 text-sm font-medium text-muted-foreground md:gap-8 md:px-12 md:text-base">
           <span className="flex items-center gap-2">
-            <Shield className="w-4 h-4" /> 100% Client-Side
+            <Shield className="h-4 w-4" /> 100% Client-Side
           </span>
-
           <span className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4" /> Works Offline
+            <WifiOff className="h-4 w-4" /> Works Offline
           </span>
-
           <span className="flex items-center gap-2">
-            <ServerOff className="w-4 h-4" /> No Server Upload
+            <ServerOff className="h-4 w-4" /> No Server Upload
           </span>
         </div>
       </div>

@@ -262,10 +262,10 @@ export default function PdfMergePage() {
       />
 
       <div className="text-center mb-10">
-        <div className="inline-flex items-center justify-center p-3 bg-indigo-100 rounded-2xl text-indigo-600 mb-4">
+        <div className="inline-flex items-center justify-center p-3 bg-accent/15 rounded-2xl text-accent mb-4">
           <Combine className="w-8 h-8" />
         </div>
-        <h1 className="text-3xl font-bold text-gray-900">Merge PDF Files</h1>
+        <h1 className="text-3xl font-bold text-foreground">Merge PDF Files</h1>
       </div>
 
       <div
@@ -283,7 +283,7 @@ export default function PdfMergePage() {
           className="absolute inset-0 w-full h-full opacity-0"
         />
 
-        <FileUp className="mx-auto mb-4 text-gray-400" />
+        <FileUp className="mx-auto mb-4 text-muted-foreground" />
         <p>Select or drop PDF files</p>
       </div>
 
@@ -292,8 +292,8 @@ export default function PdfMergePage() {
 
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <FileText className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-bold text-gray-900">
+              <FileText className="w-5 h-5 text-accent" />
+              <h2 className="text-xl font-bold text-foreground">
                 {filesWithIds.length} files selected
               </h2>
             </div>
@@ -305,7 +305,7 @@ export default function PdfMergePage() {
                 e.stopPropagation();
                 clearAll();
               }}
-              className="flex items-center gap-2 px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg"
+              className="flex items-center gap-2 px-3 py-1 text-danger hover:bg-danger/10 rounded-lg"
             >
               <Trash2 className="w-4 h-4" />
               Clear All
@@ -342,7 +342,7 @@ export default function PdfMergePage() {
             <button
               onClick={handleMerge}
               disabled={loading || filesWithIds.length < 2}
-              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl"
+              className="flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground font-semibold rounded-2xl"
             >
               {loading ? (
                 <>
@@ -362,14 +362,14 @@ export default function PdfMergePage() {
             <div className="pt-3 flex justify-center gap-3">
               <button
                 onClick={handleDownloadMerged}
-                className="flex items-center gap-2 px-5 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50"
+                className="flex items-center gap-2 px-5 py-3 border border-border rounded-xl text-muted-foreground hover:bg-muted"
               >
                 <Download className="w-4 h-4" />
                 Download
               </button>
               <button
                 onClick={handlePrintMerged}
-                className="flex items-center gap-2 px-5 py-3 bg-indigo-100 text-indigo-700 rounded-xl hover:bg-indigo-200"
+                className="flex items-center gap-2 px-5 py-3 bg-accent/15 text-accent rounded-xl hover:bg-accent/25"
               >
                 <Printer className="w-4 h-4" />
                 Print
@@ -381,3 +381,4 @@ export default function PdfMergePage() {
     </div>
   );
 }
+

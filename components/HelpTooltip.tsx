@@ -33,7 +33,7 @@ export function HelpTooltip({ text }: HelpTooltipProps) {
       {open && (
         <div
           role="tooltip"
-          className="absolute left-0 top-6 z-20 w-72 rounded-lg border bg-white p-3 text-sm text-[#1e1e2e] shadow-md"
+          className="absolute left-0 top-6 z-20 w-72 rounded-lg border bg-card p-3 text-sm text-foreground shadow-md"
         >
           {text}
         </div>
@@ -41,3 +41,4 @@ export function HelpTooltip({ text }: HelpTooltipProps) {
     </span>
   );
 }
+

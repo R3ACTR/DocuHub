@@ -21,11 +21,11 @@ export default function RecentlyDeletedFiles({
   return (
     <div className="mt-12">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-red-600">Recently Deleted</h2>
+        <h2 className="text-xl font-semibold text-danger">Recently Deleted</h2>
 
         <button
           onClick={onClear}
-          className="text-sm px-3 py-1.5 rounded-md bg-red-100 text-red-600 hover:bg-red-200 transition"
+          className="text-sm px-3 py-1.5 rounded-md bg-danger/10 text-danger hover:bg-danger/20 transition"
         >
           Clear History
         </button>
@@ -35,14 +35,14 @@ export default function RecentlyDeletedFiles({
         {deletedFiles.map((file, index) => (
           <div
             key={index}
-            className="p-4 rounded-lg border bg-red-50 shadow-sm flex justify-between items-center"
+            className="p-4 rounded-lg border bg-card shadow-sm flex justify-between items-center"
           >
             <div>
               <p className="font-medium">{file.fileName}</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 {file.tool} • {file.time}
               </p>
-              <p className="text-xs text-red-500 mt-1">
+              <p className="text-xs text-danger mt-1">
                 Deleted: {file.deletedTime}
               </p>
             </div>
@@ -50,14 +50,14 @@ export default function RecentlyDeletedFiles({
             <div className="flex gap-2">
               <button
                 onClick={() => onRestore(index)}
-                className="p-2 text-green-600 hover:bg-green-100 rounded-full transition"
+                className="p-2 text-success hover:bg-success/10 rounded-full transition"
                 title="Restore"
               >
                 <RotateCcw size={18} />
               </button>
               <button
                 onClick={() => onPermanentDelete(index)}
-                className="p-2 text-red-600 hover:bg-red-100 rounded-full transition"
+                className="p-2 text-danger hover:bg-danger/10 rounded-full transition"
                 title="Permanently Delete"
               >
                 <Trash2 size={18} />
@@ -69,3 +69,5 @@ export default function RecentlyDeletedFiles({
     </div>
   );
 }
+
+

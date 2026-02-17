@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export function Footer() {
     return (
-        <footer className="py-8 border-t border-border mt-auto bg-[#eef6f5]">
+        <footer className="py-8 border-t border-border mt-auto bg-background">
             <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between text-sm text-muted-foreground">
                 <p>&copy; {new Date().getFullYear()} DocuHub</p>
                 <div className="flex gap-4 mt-4 md:mt-0">
@@ -18,3 +18,4 @@ export function Footer() {
         </footer>
     );
 }
+

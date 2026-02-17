@@ -433,14 +433,14 @@
               {dashboardFallback && (                                                                                                                           
                 <button                                                                                                                                         
                   onClick={() => router.push(dashboardFallback)}                                                                                                
-                  className="w-full py-3 rounded-lg text-sm font-medium bg-black text-white hover:bg-gray-800"                                                  
+                  className="w-full py-3 rounded-lg text-sm font-medium bg-primary text-primary-foreground hover:opacity-90"                                                  
                 >                                                                                                                                               
                   Open Tool                                                                                                                                     
                 </button>                                                                                                                                       
               )}                                                                                                                                                
               <button                                                                                                                                           
                 onClick={() => router.push("/dashboard")}                                                                                                       
-                className="w-full py-3 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"                                                  
+                className="w-full py-3 rounded-lg text-sm font-medium border border-border hover:bg-muted"                                                  
               >                                                                                                                                                 
                 Back to Dashboard                                                                                                                               
               </button>                                                                                                                                         
@@ -464,7 +464,7 @@
                                                                                                                                                                 
           <motion.div                                                                                                                                           
             onClick={() => fileInputRef.current?.click()}                                                                                                       
-            className="border-2 border-dashed rounded-xl p-20 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50"                                
+            className="border-2 border-dashed rounded-xl p-20 text-center cursor-pointer hover:border-accent hover:bg-muted"                                
           >                                                                                                                                                     
             <Upload className="mx-auto mb-4" />                                                                                                                 
             <p>                                                                                                                                                 
@@ -483,10 +483,10 @@
             />                                                                                                                                                  
           </motion.div>                                                                                                                                         
                                                                                                                                                                 
-          <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>                                                                                
+          <p className="text-sm text-muted-foreground mt-2">Maximum 10 files allowed</p>                                                                                
                                                                                                                                                                 
           {toolId === "pdf-compress" && (                                                                                                                       
-            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
                   Compression Level                                                                                                                             
@@ -496,7 +496,7 @@
                   onChange={(e) =>                                                                                                                              
                     setCompressionLevel(e.target.value as "low" | "medium" | "high")
                   }                                                                                                                                             
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="low">Low (higher quality)</option>                                                                                             
                   <option value="medium">Medium</option>                                                                                                        
@@ -514,9 +514,9 @@
                   value={compressionTargetBytesInput}                                                                                                           
                   onChange={(e) => setCompressionTargetBytesInput(e.target.value)}                                                                              
                   placeholder="Optional, e.g. 500000"                                                                                                           
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
-                <p className="mt-1 text-xs text-gray-500">                                                                                                      
+                <p className="mt-1 text-xs text-muted-foreground">                                                                                                      
                   Optional. If set, we try to reach this size and report when not possible.                                                                     
                 </p>                                                                                                                                            
               </div>                                                                                                                                            
@@ -524,7 +524,7 @@
           )}                                                                                                                                                    
                                                                                                                                                                 
           {(toolId === "pdf-protect" || toolId === "pdf-password-remover") && (                                                                                 
-            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Password</label>                                                                                
               <input                                                                                                                                            
                 type="password"                                                                                                                                 
@@ -537,13 +537,13 @@
                     : setPasswordRemoverPassword(e.target.value)                                                                                                
                 }                                                                                                                                               
                 placeholder="Enter password"                                                                                                                    
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-watermark" && (                                                                                                                      
-            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
                   Watermark Text                                                                                                                                
@@ -553,7 +553,7 @@
                   value={watermarkText}                                                                                                                         
                   onChange={(e) => setWatermarkText(e.target.value)}                                                                                            
                   placeholder="Confidential"                                                                                                                    
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
               </div>                                                                                                                                            
               <div>                                                                                                                                             
@@ -588,46 +588,46 @@
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-delete-pages" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Pages to Delete</label>                                                                         
               <input                                                                                                                                            
                 type="text"                                                                                                                                     
                 value={deletePagesInput}                                                                                                                        
                 onChange={(e) => setDeletePagesInput(e.target.value)}                                                                                           
                 placeholder="e.g. 2,4-6"                                                                                                                        
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
-              <p className="mt-1 text-xs text-gray-500">                                                                                                        
+              <p className="mt-1 text-xs text-muted-foreground">                                                                                                        
                 Use comma-separated pages or ranges.                                                                                                            
               </p>                                                                                                                                              
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-page-reorder" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">New Page Order</label>                                                                          
               <input                                                                                                                                            
                 type="text"                                                                                                                                     
                 value={reorderPagesInput}                                                                                                                       
                 onChange={(e) => setReorderPagesInput(e.target.value)}                                                                                          
                 placeholder="e.g. 3,1,2"                                                                                                                        
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
-              <p className="mt-1 text-xs text-gray-500">                                                                                                        
+              <p className="mt-1 text-xs text-muted-foreground">                                                                                                        
                 Provide each page exactly once.                                                                                                                 
               </p>                                                                                                                                              
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-extract-images" && (                                                                                                                 
-            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
+            <div className="mt-6 rounded-xl border border-border p-4">                                                                                        
               <label className="block text-sm font-medium mb-2">Export Format</label>                                                                           
               <select                                                                                                                                           
                 value={extractImageFormat}                                                                                                                      
                 onChange={(e) =>                                                                                                                                
                   setExtractImageFormat(e.target.value === "jpg" ? "jpg" : "png")                                                                               
                 }                                                                                                                                               
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
+                className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                          
               >
                 <option value="png">PNG</option>                                                                                                                
                 <option value="jpg">JPG</option>                                                                                                                
@@ -636,7 +636,7 @@
           )}
                                                                                                                                                                 
           {toolId === "pdf-page-numbers" && (                                                                                                                   
-            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
                   Number Format                                                                                                                                 
@@ -644,7 +644,7 @@
                 <select                                                                                                                                         
                   value={pageNumberFormat}                                                                                                                      
                   onChange={(e) => setPageNumberFormat(e.target.value)}                                                                                         
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="numeric">1, 2, 3</option>                                                                                                      
                   <option value="Roman">I, II, III</option>                                                                                                     
@@ -664,14 +664,14 @@
                       setPageNumberFontSize(Math.min(72, Math.max(8, next)));                                                                                   
                     }                                                                                                                                           
                   }}                                                                                                                                            
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
               </div>                                                                                                                                            
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-rotate" && (                                                                                                                         
-            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
+            <div className="mt-6 rounded-xl border border-border p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
                   Rotation Angle                                                                                                                                
@@ -684,7 +684,7 @@
                       angle: Number(e.target.value),                                                                                                            
                     }))                                                                                                                                         
                   }                                                                                                                                             
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="90">90 degrees</option>                                                                                                        
                   <option value="180">180 degrees</option>                                                                                                      
@@ -702,13 +702,13 @@
                     setRotateConfig((prev) => ({ ...prev, pages: e.target.value }))                                                                             
                   }                                                                                                                                             
                   placeholder="Leave blank for all pages (e.g. 1,3-5)"                                                                                          
-                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
+                  className="w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
               </div>                                                                                                                                            
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
-          {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}                                                                               
+          {fileError && <p className="mt-3 text-sm text-danger">{fileError}</p>}                                                                               
                                                                                                                                                                 
           <button                                                                                                                                               
             onClick={handleProcessFile}                                                                                                                         
@@ -723,8 +723,8 @@
             }                                                                                                                                                   
             className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${                                                                           
               selectedFiles.length && !isProcessing                                                                                                             
-                ? "bg-black text-white hover:bg-gray-800"                                                                                                       
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"                                                                                                
+                ? "bg-primary text-primary-foreground hover:opacity-90"                                                                                                       
+                : "bg-muted text-muted-foreground cursor-not-allowed"                                                                                                
             }`}                                                                                                                                                 
           >                                                                                                                                                     
             {isProcessing ? "Processing..." : "Process File"}                                                                                                   
@@ -734,3 +734,4 @@
     );                                                                                                                                                          
   }                                                                                                                                                             
  
+

@@ -833,9 +833,9 @@ export default function ProcessingPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="w-full max-w-md text-center px-6">
           <Loader2 className="h-10 w-10 animate-spin mx-auto mb-6" />
-          <p className="mb-2 text-sm text-gray-600">{stage}</p>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div className="bg-black h-3 transition-all duration-500" style={{ width: `${progress}%` }} />
+          <p className="mb-2 text-sm text-muted-foreground">{stage}</p>
+          <div className="w-full bg-muted rounded-full h-3 overflow-hidden">
+            <div className="bg-primary h-3 transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
           <p className="mt-2 text-sm font-medium">{progress}%</p>
         </div>
@@ -847,11 +847,11 @@ export default function ProcessingPage() {
     return (
       <div className="min-h-screen flex items-center justify-center text-center">
         <div>
-          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-3" />
+          <AlertCircle className="h-12 w-12 text-danger mx-auto mb-3" />
           <p>{error || "Processing failed."}</p>
           <button
             onClick={() => router.push("/dashboard")}
-            className="mt-4 px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="mt-4 px-4 py-2 rounded-lg border border-border hover:bg-muted"
           >
             Return to Dashboard
           </button>
@@ -863,7 +863,7 @@ export default function ProcessingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center text-center">
       <div>
-        <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+        <CheckCircle className="h-12 w-12 text-success mx-auto mb-4" />
 
         <h2 className="text-xl font-semibold mb-4">
           {toolId === "jpeg-to-pdf" ? "JPEG converted to PDF!" : toolId === "png-to-pdf" ? "PNG converted to PDF!" : "Completed successfully"}
@@ -873,7 +873,7 @@ export default function ProcessingPage() {
           <div key={index} className="mb-3">
             <button
               onClick={() => download(item, index)}
-              className="block mx-auto px-6 py-3 bg-black text-white rounded-lg"
+              className="block mx-auto px-6 py-3 bg-primary text-primary-foreground rounded-lg"
             >
               Download {item.name}
             </button>
@@ -889,20 +889,20 @@ export default function ProcessingPage() {
         ))}
 
         {toolId === "pdf-compress" && originalSize && compressedSize && (
-          <div className="mt-6 p-4 bg-gray-100 rounded-lg text-sm">
+          <div className="mt-6 p-4 bg-muted rounded-lg text-sm">
             <p>Compression level: {compressionLevelUsed}</p>
             <p>Processing mode: {compressionRewriteMode}</p>
             <p>Object streams: {compressionUsesObjectStreams ? "enabled" : "disabled"}</p>
             <p>Original: {(originalSize / 1024 / 1024).toFixed(2)} MB</p>
             <p>Compressed: {(compressedSize / 1024 / 1024).toFixed(2)} MB</p>
-            <p className="font-semibold text-green-600">
+            <p className="font-semibold text-success">
               Reduced {(((originalSize - compressedSize) / originalSize) * 100).toFixed(1)}%
             </p>
             {compressionTargetBytes != null && (
               <p className="mt-1">Target: {(compressionTargetBytes / 1024 / 1024).toFixed(2)} MB</p>
             )}
             {compressionTargetStatus === "target_reached" && (
-              <p className="font-semibold text-green-600">Target size reached.</p>
+              <p className="font-semibold text-success">Target size reached.</p>
             )}
             {compressionTargetStatus === "target_unreachable" && (
               <p className="font-semibold text-amber-600">
@@ -914,7 +914,7 @@ export default function ProcessingPage() {
 
         {toolId === "ocr" && (
           <div className="mt-4 max-w-3xl">
-            <div className="rounded-lg border bg-gray-50 p-4 text-left text-sm whitespace-pre-wrap max-h-72 overflow-auto">
+            <div className="rounded-lg border bg-muted/60 p-4 text-left text-sm whitespace-pre-wrap max-h-72 overflow-auto">
               {text || "No text was extracted."}
             </div>
             <button onClick={copyText} className="mt-4 px-6 py-3 border rounded-lg">
@@ -929,3 +929,4 @@ export default function ProcessingPage() {
     </div>
   );
 }
+

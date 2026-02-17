@@ -126,12 +126,12 @@ export default function PdfSplitPage() {
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-xl p-10 text-center transition ${
           isDragging
-            ? "border-indigo-500 bg-indigo-50"
-            : "border-gray-300 bg-gray-50 hover:border-gray-400"
+            ? "border-accent bg-accent/10"
+            : "border-border bg-muted hover:border-accent"
         }`}
       >
         <h1 className="text-2xl font-semibold mb-2">Split PDF File</h1>
-        <p className="text-gray-500 text-sm mb-4">
+        <p className="text-muted-foreground text-sm mb-4">
           Upload a PDF and choose pages to split
         </p>
 
@@ -147,13 +147,13 @@ export default function PdfSplitPage() {
         />
 
         {/* ✅ File Count */}
-        <p className="text-sm text-gray-500 mt-2">
+        <p className="text-sm text-muted-foreground mt-2">
           {files.length} file selected
         </p>
 
         {/* ✅ NEW — File Size Near Upload Area */}
         {files.length > 0 && (
-          <p className="text-xs text-gray-500 mt-1">
+          <p className="text-xs text-muted-foreground mt-1">
             Size: {formatFileSize(files[0].size)}
           </p>
         )}
@@ -162,10 +162,10 @@ export default function PdfSplitPage() {
       {/* Empty State */}
       {files.length === 0 && (
         <div className="mt-6 text-center">
-          <p className="text-gray-500 text-lg font-medium">
+          <p className="text-muted-foreground text-lg font-medium">
             No files selected yet
           </p>
-          <p className="text-gray-400 text-sm mt-1">
+          <p className="text-muted-foreground text-sm mt-1">
             Upload files to get started
           </p>
         </div>
@@ -175,18 +175,18 @@ export default function PdfSplitPage() {
       {files.map((file, index) => (
         <div
           key={index}
-          className="mt-4 flex justify-between items-center bg-white border rounded-lg p-4 shadow-sm"
+          className="mt-4 flex justify-between items-center bg-card border border-border rounded-lg p-4 shadow-sm"
         >
           <div>
             <p className="font-medium">📄 {file.name}</p>
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-muted-foreground">
               {formatFileSize(file.size)}
             </p>
           </div>
 
           <button
             onClick={() => removeFile(index)}
-            className="px-3 py-1.5 text-sm bg-red-500 text-white rounded hover:bg-red-600 transition"
+            className="px-3 py-1.5 text-sm bg-danger text-primary-foreground rounded hover:opacity-90 transition"
           >
             Remove
           </button>
@@ -209,7 +209,7 @@ export default function PdfSplitPage() {
         placeholder="Enter pages (example: 1-3 or 2)"
         value={pageRange}
         onChange={(e) => setPageRange(e.target.value)}
-        className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
+        className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none"
       />
 
       {/* Split Button */}
@@ -218,8 +218,8 @@ export default function PdfSplitPage() {
         disabled={loading || !files.length || !pageRange}
         className={`w-full mt-6 py-3 rounded-lg font-medium transition ${
           loading || !files.length || !pageRange
-            ? "bg-gray-400 cursor-not-allowed"
-            : "bg-indigo-600 hover:bg-indigo-700 text-white"
+            ? "bg-muted text-muted-foreground cursor-not-allowed"
+            : "bg-primary hover:opacity-90 text-primary-foreground"
         }`}
       >
         {loading ? "Splitting PDF..." : "Split PDF"}
@@ -227,7 +227,7 @@ export default function PdfSplitPage() {
 
       {/* Success Message */}
       {successMsg && (
-        <p className="text-green-600 text-sm mt-4 text-center font-medium">
+        <p className="text-success text-sm mt-4 text-center font-medium">
           {successMsg}
         </p>
       )}
@@ -235,3 +235,4 @@ export default function PdfSplitPage() {
     </div>
   );
 }
+

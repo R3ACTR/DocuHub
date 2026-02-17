@@ -54,7 +54,7 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
 
         <button
           onClick={() => setShowClearModal(true)}
-          className="text-red-500 hover:text-red-700 text-sm font-medium"
+          className="text-danger hover:opacity-80 text-sm font-medium"
         >
           Clear History
         </button>
@@ -65,11 +65,11 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
         {files.map((file, index) => (
           <div
             key={index}
-            className="p-4 rounded-lg border bg-white shadow-sm flex justify-between items-center"
+            className="p-4 rounded-lg border bg-card shadow-sm flex justify-between items-center"
           >
             <div>
               <p className="font-medium">{file.fileName}</p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-muted-foreground">
                 {file.tool} • {file.time}
               </p>
             </div>
@@ -77,7 +77,7 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
             <div className="flex items-center gap-2">
               <button
                 onClick={() => handleCopyLink(file, index)}
-                className="px-3 py-1.5 text-xs border rounded-md hover:bg-gray-50 transition"
+                className="px-3 py-1.5 text-xs border rounded-md hover:bg-muted transition"
                 title="Copy Link"
               >
                 <span className="inline-flex items-center gap-1.5">
@@ -92,7 +92,7 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
                   setSelectedIndex(index);
                   setShowDeleteModal(true);
                 }}
-                className="p-2 text-red-500 hover:bg-red-50 rounded-full transition"
+                className="p-2 text-danger hover:bg-danger/10 rounded-full transition"
                 title="Delete"
               >
                 <Trash2 size={18} />
@@ -104,17 +104,17 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+        <div className="fixed inset-0 flex items-center justify-center bg-foreground/40 z-50">
+          <div className="bg-card rounded-lg shadow-lg p-6 w-80">
             <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to delete this file?
             </p>
 
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
-                className="px-4 py-2 rounded-md border text-gray-600 hover:bg-gray-100"
+                className="px-4 py-2 rounded-md border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </button>
@@ -126,7 +126,7 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
                   }
                   setShowDeleteModal(false);
                 }}
-                className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+                className="px-4 py-2 rounded-md bg-danger text-primary-foreground hover:opacity-90"
               >
                 Delete
               </button>
@@ -137,17 +137,17 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
 
       {/* Clear History Modal */}
       {showClearModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/40 z-50">
-          <div className="bg-white rounded-lg shadow-lg p-6 w-80">
+        <div className="fixed inset-0 flex items-center justify-center bg-foreground/40 z-50">
+          <div className="bg-card rounded-lg shadow-lg p-6 w-80">
             <h3 className="text-lg font-semibold mb-4">Clear History</h3>
-            <p className="text-sm text-gray-600 mb-6">
+            <p className="text-sm text-muted-foreground mb-6">
               Are you sure you want to clear all recent files?
             </p>
 
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setShowClearModal(false)}
-                className="px-4 py-2 rounded-md border text-gray-600 hover:bg-gray-100"
+                className="px-4 py-2 rounded-md border text-muted-foreground hover:bg-muted"
               >
                 Cancel
               </button>
@@ -157,7 +157,7 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
                   onClear();
                   setShowClearModal(false);
                 }}
-                className="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600"
+                className="px-4 py-2 rounded-md bg-danger text-primary-foreground hover:opacity-90"
               >
                 Clear
               </button>
@@ -168,3 +168,4 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
     </div>
   );
 }
+
