@@ -121,7 +121,6 @@ export default function PdfMergePage() {
     setFilesWithIds((prev) => prev.filter((item) => item.id !== idToRemove));
   };
 
-  /* ✅ ONLY CHANGE MADE HERE */
   const clearAll = () => {
     const confirmClear = window.confirm(
       "Are you sure you want to remove all uploaded files?"
@@ -213,62 +212,30 @@ export default function PdfMergePage() {
           <Combine className="w-8 h-8" />
         </div>
         <h1 className="text-3xl font-bold text-gray-900">Merge PDF Files</h1>
-        <p className="mt-2 text-lg text-gray-600">
-          Combine multiple PDF documents into a single file. Reorder them as needed.
-        </p>
       </div>
-
-      {loading && (
-        <div className="mb-6">
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-            <div
-              className="h-full bg-indigo-600 transition-all duration-300"
-              style={{ width: `${uploadProgress}%` }}
-            />
-          </div>
-          <p className="text-sm text-gray-500 mt-2 text-center">
-            Processing… {Math.round(uploadProgress)}%
-          </p>
-        </div>
-      )}
 
       <div
         tabIndex={0}
-        aria-label="Upload PDF files"
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`relative border-2 border-dashed rounded-3xl p-12 text-center transition-all
-          ${
-            isDraggingOver
-              ? 'border-indigo-500 bg-indigo-50/50'
-              : 'border-gray-200 bg-white hover:border-gray-300'
-          }`}
+        className={`relative border-2 border-dashed rounded-3xl p-12 text-center`}
       >
         <input
           type="file"
           accept="application/pdf"
           multiple
           onChange={handleFileChange}
-          id="file-upload"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-default"
+          className="absolute inset-0 w-full h-full opacity-0"
         />
 
-        <div className="flex flex-col items-center">
-          <div className="p-4 bg-gray-50 rounded-full mb-4">
-            <FileUp className="w-10 h-10 text-gray-400" />
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900">
-            {isDraggingOver ? 'Drop files here' : 'Select PDF files to merge'}
-          </h3>
-          <p className="mt-1 text-sm text-gray-500">
-            Drag and drop files here, or click to browse
-          </p>
-        </div>
+        <FileUp className="mx-auto mb-4 text-gray-400" />
+        <p>Select or drop PDF files</p>
       </div>
 
       {filesWithIds.length > 0 && (
         <div className="mt-12 space-y-6">
+
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FileText className="w-5 h-5 text-indigo-600" />
@@ -278,7 +245,12 @@ export default function PdfMergePage() {
             </div>
 
             <button
-              onClick={clearAll}
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                clearAll();
+              }}
               className="flex items-center gap-2 px-3 py-1 text-red-600 hover:bg-red-50 rounded-lg"
             >
               <Trash2 className="w-4 h-4" />
@@ -306,21 +278,6 @@ export default function PdfMergePage() {
                       uploadedTime={getRelativeTime(item.uploadedAt)}
                       onRemove={() => removeFile(item.id)}
                     />
-
-                    <button
-                      onClick={() => {
-                        const input = document.getElementById(
-                          'replace-file-input'
-                        ) as HTMLInputElement;
-                        if (input) {
-                          input.setAttribute('data-replace-id', item.id);
-                          input.click();
-                        }
-                      }}
-                      className="absolute right-20 top-4 text-sm px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100"
-                    >
-                      Replace
-                    </button>
                   </div>
                 ))}
               </div>
@@ -331,7 +288,7 @@ export default function PdfMergePage() {
             <button
               onClick={handleMerge}
               disabled={loading || filesWithIds.length < 2}
-              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-3 px-8 py-4 bg-indigo-600 text-white font-semibold rounded-2xl"
             >
               {loading ? (
                 <>
@@ -351,4 +308,3 @@ export default function PdfMergePage() {
     </div>
   );
 }
-
