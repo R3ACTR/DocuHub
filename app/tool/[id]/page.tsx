@@ -411,8 +411,6 @@ export default function ToolUploadPage() {
         <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>
 
 
-        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
-
         {toolId === "pdf-compress" && (
           <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">
             <div>
@@ -450,7 +448,6 @@ export default function ToolUploadPage() {
             </div>
           </div>
         )}
- upstream/main
 
         {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
 
