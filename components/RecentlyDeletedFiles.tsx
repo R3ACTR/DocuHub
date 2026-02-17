@@ -1,7 +1,7 @@
-"use client";
-
+import { useState } from "react";
 import { Trash2, RotateCcw, FileText as FileIcon } from "lucide-react";
 import { DeletedFile } from "@/lib/hooks/useRecentFiles";
+import { ConfirmationModal } from "./ConfirmationModal";
 
 interface RecentlyDeletedFilesProps {
   deletedFiles: DeletedFile[];
@@ -16,7 +16,23 @@ export default function RecentlyDeletedFiles({
   onPermanentDelete,
   onClear,
 }: RecentlyDeletedFilesProps) {
+  const [confirmAction, setConfirmAction] = useState<{
+    type: "delete" | "clear";
+    index?: number;
+  } | null>(null);
+
   if (deletedFiles.length === 0) return null;
+
+  const handleConfirm = () => {
+    if (!confirmAction) return;
+
+    if (confirmAction.type === "delete" && confirmAction.index !== undefined) {
+      onPermanentDelete(confirmAction.index);
+    } else if (confirmAction.type === "clear") {
+      onClear();
+    }
+    setConfirmAction(null);
+  };
 
   return (
     <div className="mt-12">
@@ -27,7 +43,7 @@ export default function RecentlyDeletedFiles({
         </h2>
 
         <button
-          onClick={onClear}
+          onClick={() => setConfirmAction({ type: "clear" })}
           className="text-sm px-4 py-2 rounded-lg bg-rose-50 text-rose-600 font-medium hover:bg-rose-100 transition-colors"
         >
           Clear History
@@ -64,7 +80,7 @@ export default function RecentlyDeletedFiles({
                 <RotateCcw size={18} />
               </button>
               <button
-                onClick={() => onPermanentDelete(index)}
+                onClick={() => setConfirmAction({ type: "delete", index })}
                 className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                 title="Permanently Delete"
               >
@@ -74,6 +90,24 @@ export default function RecentlyDeletedFiles({
           </div>
         ))}
       </div>
+
+      <ConfirmationModal
+        isOpen={!!confirmAction}
+        onClose={() => setConfirmAction(null)}
+        onConfirm={handleConfirm}
+        title={
+          confirmAction?.type === "delete"
+            ? "Delete File Permanently?"
+            : "Clear Deletion History?"
+        }
+        message={
+          confirmAction?.type === "delete"
+            ? "This action cannot be undone. The file will be permanently removed from your history."
+            : "This will permanently remove all files from your deletion history. This action cannot be undone."
+        }
+        confirmText="Delete"
+        cancelText="Cancel"
+      />
     </div>
   );
 }

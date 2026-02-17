@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tesseract from "tesseract.js";
 import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { useRecentFiles } from "@/lib/hooks/useRecentFiles";
 
 type StoredFile = {
