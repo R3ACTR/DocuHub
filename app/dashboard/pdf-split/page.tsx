@@ -203,12 +203,12 @@ export default function PdfSplitPage() {
         className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
       />
 
-      {/* Split Button */}
+      {/* ✅ UPDATED Split Button */}
       <button
         onClick={handleSplit}
-        disabled={loading || !files.length}
+        disabled={loading || !files.length || !pageRange}
         className={`w-full mt-6 py-3 rounded-lg font-medium transition ${
-          loading || !files.length
+          loading || !files.length || !pageRange
             ? "bg-gray-400 cursor-not-allowed"
             : "bg-indigo-600 hover:bg-indigo-700 text-white"
         }`}
