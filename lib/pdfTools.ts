@@ -42,7 +42,7 @@ export const PDF_TOOLS = Object.freeze([
     id: "pdf-compress",
     title: "Compress PDF",
     description: "Reduce file size",
-    href: "/dashboard/pdf-compress",
+    href: "/tool/pdf-compress",
     icon: Minimize2,
   },
   {
@@ -56,7 +56,7 @@ export const PDF_TOOLS = Object.freeze([
     id: "pdf-protect",
     title: "Protect PDF",
     description: "Add password protection",
-    href: "/dashboard/pdf-protect",
+    href: "/tool/pdf-protect",
     icon: FileText,
   },
   {
@@ -77,7 +77,7 @@ export const PDF_TOOLS = Object.freeze([
     id: "pdf-watermark",
     title: "Watermark PDF",
     description: "Add text watermark to PDF files",
-    href: "/dashboard/pdf-watermark",
+    href: "/tool/pdf-watermark",
     icon: FileText,
   },
   {
