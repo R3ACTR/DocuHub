@@ -6,7 +6,10 @@ import {
   Loader2,
   FileText,
   Image as ImageIcon,
-  CheckCircle
+  CheckCircle,
+  ArrowLeftRight,
+  ScanText,
+  Shield,
 } from "lucide-react";
 
 import { ToolCard } from "@/components/ToolCard";
@@ -16,7 +19,6 @@ import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { clearStoredFiles, storeFiles } from "@/lib/fileStore";
 
-
 import {
   saveToolState,
   loadToolState,
@@ -24,6 +26,77 @@ import {
 } from "@/lib/toolStateStorage";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
+
+const UPLOAD_ENABLED_TOOLS = new Set([
+  "ocr",
+  "jpeg-to-pdf",
+  "png-to-pdf",
+  "pdf-protect",
+  "pdf-compress",
+  "pdf-watermark",
+  "pdf-redact",
+  "metadata-viewer",
+  "pdf-extract-images",
+  "pdf-delete-pages",
+  "pdf-page-reorder",
+  "pdf-password-remover",
+  "pdf-page-numbers",
+  "pdf-rotate",
+]);
+
+const CATEGORY_TOOLS = new Set(["pdf-tools", "file-conversion", "data-tools"]);
+const FILE_CONVERSION_TOOLS = Object.freeze([
+  {
+    id: "document-to-pdf",
+    title: "Document to PDF",
+    description: "Convert TXT and DOCX documents to PDF",
+    href: "/dashboard/document-to-pdf",
+    icon: FileText,
+  },
+  {
+    id: "jpeg-to-pdf",
+    title: "JPEG to PDF",
+    description: "Convert JPEG images into PDF",
+    href: "/tool/jpeg-to-pdf",
+    icon: ImageIcon,
+  },
+  {
+    id: "png-to-pdf",
+    title: "PNG to PDF",
+    description: "Convert PNG images into PDF",
+    href: "/tool/png-to-pdf",
+    icon: ImageIcon,
+  },
+]);
+const DATA_TOOLS = Object.freeze([
+  {
+    id: "ocr",
+    title: "OCR",
+    description: "Extract text from images",
+    href: "/tool/ocr",
+    icon: ScanText,
+  },
+  {
+    id: "metadata-viewer",
+    title: "Metadata Viewer",
+    description: "Extract and download PDF metadata",
+    href: "/tool/metadata-viewer",
+    icon: FileText,
+  },
+  {
+    id: "pdf-redact",
+    title: "Redact PDF",
+    description: "Flatten PDF pages to remove selectable text",
+    href: "/tool/pdf-redact",
+    icon: Shield,
+  },
+]);
+
+const MOVED_TO_DASHBOARD: Record<string, string> = {
+  "pdf-merge": "/dashboard/pdf-merge",
+  "document-to-pdf": "/dashboard/document-to-pdf",
+  "pdf-split": "/dashboard/pdf-split",
+};
 
 export default function ToolUploadPage() {
   const router = useRouter();
@@ -42,13 +115,22 @@ export default function ToolUploadPage() {
   const [watermarkText, setWatermarkText] = useState("");
   const [rotationAngle, setRotationAngle] = useState(45);
   const [opacity, setOpacity] = useState(40);
+  const [compressionLevel, setCompressionLevel] = useState<
+    "low" | "medium" | "high"
+  >("medium");
+  const [protectPassword, setProtectPassword] = useState("");
+  const [passwordRemoverPassword, setPasswordRemoverPassword] = useState("");
+  const [deletePagesInput, setDeletePagesInput] = useState("");
+  const [reorderPagesInput, setReorderPagesInput] = useState("");
+  const [extractImageFormat, setExtractImageFormat] = useState<"png" | "jpg">(
+    "png",
+  );
+  const [redactionStrategy, setRedactionStrategy] =
+    useState<"flatten">("flatten");
 
-  const [pagesToRotate, setPagesToRotate] = useState("");
-
+  const [rotateConfig, setRotateConfig] = useState({ angle: 90, pages: "" });
   const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
   const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
-
-  const [rotationAngleOption, setRotationAngleOption] = useState("90");
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -68,13 +150,8 @@ export default function ToolUploadPage() {
     if (!toolId || !selectedFiles.length) return;
 
     const file = selectedFiles[0];
-
     saveToolState(toolId, {
-      fileMeta: {
-        name: file.name,
-        size: file.size,
-        type: file.type,
-      },
+      fileMeta: { name: file.name, size: file.size, type: file.type },
     });
   }, [toolId, selectedFiles]);
 
@@ -84,7 +161,6 @@ export default function ToolUploadPage() {
       e.preventDefault();
       e.returnValue = "";
     };
-
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasUnsavedWork]);
@@ -93,37 +169,20 @@ export default function ToolUploadPage() {
     switch (toolId) {
       case "ocr":
         return [".jpg", ".jpeg", ".png"];
-
       case "jpeg-to-pdf":
         return [".jpg", ".jpeg"];
-
       case "png-to-pdf":
         return [".png"];
-
-      case "pdf-merge":
-      case "pdf-split":
-      case "pdf-protect":
-      case "pdf-compress":
-      case "pdf-watermark":
-      case "pdf-page-numbers":
-      case "pdf-rotate":
-      case "pdf-rotate":
-        return [".pdf"];
-
       default:
-        return [];
+        return [".pdf"];
     }
   };
 
   const getFileIcon = (file: File) => {
     const ext = file.name.split(".").pop()?.toLowerCase();
-
-    if (ext === "pdf")
-      return <FileText className="w-6 h-6 text-red-500" />;
-
+    if (ext === "pdf") return <FileText className="w-6 h-6 text-red-500" />;
     if (["jpg", "jpeg", "png"].includes(ext || ""))
       return <ImageIcon className="w-6 h-6 text-blue-500" />;
-
     return <FileText className="w-6 h-6 text-gray-400" />;
   };
 
@@ -132,6 +191,12 @@ export default function ToolUploadPage() {
 
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+
+    const MAX_FILES = 10;
+    if (files.length > MAX_FILES) {
+      setFileError(`You can upload a maximum of ${MAX_FILES} files.`);
+      return;
+    }
 
     const allowed = getSupportedTypes();
     const validFiles: File[] = [];
@@ -157,51 +222,26 @@ export default function ToolUploadPage() {
     setHasUnsavedWork(true);
   };
 
-  const handleRemoveFile = (index: number) => {
-    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
-  };
-
-  const handleReplaceFile = () => {
-    fileInputRef.current?.click();
-  };
-
   const handleProcessFile = async () => {
     if (!selectedFiles.length) return;
+    if (toolId === "pdf-protect" && !protectPassword.trim())
+      return setFileError("Enter password.");
+    if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())
+      return setFileError("Enter password.");
 
     setIsProcessing(true);
 
     try {
-      let ok = true;
+      const ok = await storeFiles(
+        selectedFiles,
+        toolId === "pdf-protect"
+          ? { password: protectPassword }
+          : toolId === "pdf-password-remover"
+            ? { password: passwordRemoverPassword }
+            : undefined,
+      );
 
-      for (const file of selectedFiles) {
-        const res = await storeFile(file);
-        if (!res) {
-          ok = false;
-          break;
-        }
-      }
-
-      if (!ok) {
-        setFileError("Failed to process file.");
-        return;
-      }
-
-      if (toolId === "pdf-rotate") {
-        localStorage.setItem("rotationAngle", rotationAngle.toString());
-        localStorage.setItem("pagesToRotate", pagesToRotate);
-        localStorage.setItem("pdfRotateAngle", rotationAngleOption);
-      }
-
-      if (toolId === "pdf-watermark") {
-        localStorage.setItem("watermarkRotation", rotationAngle.toString());
-        localStorage.setItem("watermarkText", watermarkText);
-        localStorage.setItem("watermarkOpacity", opacity.toString());
-      }
-
-      if (toolId === "pdf-page-numbers") {
-        localStorage.setItem("pageNumberFormat", pageNumberFormat);
-        localStorage.setItem("pageNumberFontSize", pageNumberFontSize.toString());
-      }
+      if (!ok) return setFileError("Failed to process file.");
 
       clearToolState(toolId);
       router.push(`/tool/${toolId}/processing`);
@@ -215,22 +255,49 @@ export default function ToolUploadPage() {
   const handleBackNavigation = () => {
     if (hasUnsavedWork) {
       const confirmLeave = window.confirm(
-        "You have unsaved work. Leave anyway?"
+        "You have unsaved work. Leave anyway?",
       );
       if (!confirmLeave) return;
     }
     router.push("/dashboard");
   };
 
-  if (toolId === "pdf-tools") {
+  if (CATEGORY_TOOLS.has(toolId)) {
+    const categoryConfig =
+      toolId === "pdf-tools"
+        ? {
+            title: "PDF Tools",
+            subtitle: "Choose a PDF tool",
+            tools: PDF_TOOLS,
+            icon: FileText,
+          }
+        : toolId === "file-conversion"
+          ? {
+              title: "File Conversion",
+              subtitle: "Convert files across supported formats",
+              tools: FILE_CONVERSION_TOOLS,
+              icon: ArrowLeftRight,
+            }
+          : {
+              title: "Data Tools",
+              subtitle: "Extract and process document data",
+              tools: DATA_TOOLS,
+              icon: ScanText,
+            };
+
     return (
       <div className="min-h-screen flex flex-col">
         <main className="container mx-auto px-6 py-12 md:px-12">
-          <h1 className="text-3xl font-semibold mb-2">PDF Tools</h1>
-          <p className="text-muted-foreground mb-12">Choose a PDF tool</p>
+          <div className="flex items-center gap-3 mb-2">
+            <categoryConfig.icon className="w-7 h-7 text-primary" />
+            <h1 className="text-3xl font-semibold">{categoryConfig.title}</h1>
+          </div>
+          <p className="text-muted-foreground mb-12">
+            {categoryConfig.subtitle}
+          </p>
 
           <div className="grid gap-6 md:grid-cols-2 max-w-5xl">
-            {PDF_TOOLS.map(tool => (
+            {categoryConfig.tools.map((tool) => (
               <ToolCard key={tool.id} {...tool} />
             ))}
           </div>
@@ -239,40 +306,63 @@ export default function ToolUploadPage() {
     );
   }
 
+  const dashboardFallback = MOVED_TO_DASHBOARD[toolId];
+  if (!UPLOAD_ENABLED_TOOLS.has(toolId)) {
+    const heading = dashboardFallback
+      ? "This tool moved to Dashboard"
+      : "This tool is currently unavailable";
+    const details = dashboardFallback
+      ? "Use the dashboard route for this tool."
+      : "Choose an available tool to continue.";
+
+    return (
+      <div className="min-h-screen flex items-center justify-center px-6">
+        <div className="max-w-md w-full text-center border rounded-xl p-6">
+          <h1 className="text-2xl font-semibold">{heading}</h1>
+          <p className="text-muted-foreground mt-2">
+            {details} (Tool ID: {toolId})
+          </p>
+          <div className="mt-6 flex flex-col gap-3">
+            {dashboardFallback && (
+              <button
+                onClick={() => router.push(dashboardFallback)}
+                className="w-full py-3 rounded-lg text-sm font-medium bg-black text-white hover:bg-gray-800"
+              >
+                Open Tool
+              </button>
+            )}
+            <button
+              onClick={() => router.push("/dashboard")}
+              className="w-full py-3 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"
+            >
+              Back to Dashboard
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col">
       <main className="container mx-auto px-6 py-12 md:px-12">
-
         <button
           onClick={handleBackNavigation}
           className="inline-flex items-center gap-2 text-sm mb-6"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Dashboard
+          <ArrowLeft className="w-4 h-4" /> Back to Dashboard
         </button>
 
         <h1 className="text-3xl font-semibold mb-8">Upload your file</h1>
 
         <motion.div
           onClick={() => fileInputRef.current?.click()}
-          onDragOver={e => {
-            e.preventDefault();
-            setIsDraggingOver(true);
-          }}
-          onDragLeave={() => setIsDraggingOver(false)}
-          className={`border-2 border-dashed rounded-xl p-20 text-center cursor-pointer ${
-            isDraggingOver
-              ? "border-blue-500 bg-blue-50"
-              : "hover:border-gray-400 hover:bg-gray-50"
-          }`}
+          className="border-2 border-dashed rounded-xl p-20 text-center cursor-pointer hover:border-gray-400 hover:bg-gray-50"
         >
           <Upload className="mx-auto mb-4" />
-
           <p>
             {selectedFiles.length
               ? `${selectedFiles.length} file(s) selected`
-              : persistedFileMeta
-              ? `Previously selected: ${persistedFileMeta.name}`
               : "Drag & drop or click to browse"}
           </p>
 
@@ -286,70 +376,28 @@ export default function ToolUploadPage() {
           />
         </motion.div>
 
-        {selectedFiles.length > 0 && (
-          <div className="mt-6 space-y-3">
-            {selectedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="flex items-center gap-3 p-4 rounded-xl border bg-white shadow-sm"
-              >
-                {getFileIcon(file)}
+        <p className="text-sm text-gray-500 mt-2">Maximum 10 files allowed</p>
 
-                {/* ✅ CHECK ICON ADDED HERE */}
-                <div className="flex-1 flex items-start justify-between">
-                  <div>
-                    <p className="font-medium">{file.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-
-                  {!fileError && (
-                    <CheckCircle className="w-4 h-4 text-green-500 mt-1" />
-                  )}
-                </div>
-
-                <button
-                  onClick={handleReplaceFile}
-                  className="text-sm text-blue-600 hover:underline mr-3"
-                >
-                  Replace
-                </button>
-
-                <button
-                  onClick={() => handleRemoveFile(index)}
-                  className="text-sm text-red-600 hover:underline"
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
+        {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}
 
         <button
           onClick={handleProcessFile}
-          disabled={!selectedFiles.length || isProcessing}
+          disabled={
+            !selectedFiles.length ||
+            isProcessing ||
+            (toolId === "pdf-protect" && !protectPassword.trim()) ||
+            (toolId === "pdf-password-remover" &&
+              !passwordRemoverPassword.trim())
+          }
           className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${
             selectedFiles.length && !isProcessing
               ? "bg-black text-white hover:bg-gray-800"
               : "bg-gray-300 text-gray-500 cursor-not-allowed"
           }`}
         >
-          {isProcessing ? (
-            <span className="flex items-center justify-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Processing...
-            </span>
-          ) : (
-            "Process File"
-          )}
+          {isProcessing ? "Processing..." : "Process File"}
         </button>
-
-        {fileError && (
-          <p className="mt-3 text-sm text-red-600">{fileError}</p>
-        )}
       </main>
     </div>
   );
-} 
+}

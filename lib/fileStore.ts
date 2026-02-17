@@ -2,6 +2,7 @@ let storedFiles: {
   data: string;
   name: string;
   type: string;
+  file?: File;
   password?: string;
 }[] = [];
 
@@ -10,6 +11,14 @@ export async function storeFiles(
   options?: { password?: string }
 ): Promise<boolean> {
   try {
+    // ✅ MAX FILE COUNT LIMIT
+    const MAX_FILES = 10;
+
+    if (files.length > MAX_FILES) {
+      alert(`You can upload a maximum of ${MAX_FILES} files.`);
+      return false;
+    }
+
     const results = await Promise.all(
       files.map(
         (file) =>
@@ -17,6 +26,7 @@ export async function storeFiles(
             data: string;
             name: string;
             type: string;
+            file?: File;
             password?: string;
           }>((resolve, reject) => {
             const reader = new FileReader();
@@ -26,6 +36,7 @@ export async function storeFiles(
                 data: reader.result as string,
                 name: file.name,
                 type: file.type,
+                file,
                 password: options?.password,
               });
 

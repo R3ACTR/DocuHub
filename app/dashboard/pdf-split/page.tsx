@@ -9,6 +9,9 @@ export default function PdfSplitPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [pageRange, setPageRange] = useState("");
 
+  /* ✅ ADDED SUCCESS STATE */
+  const [successMsg, setSuccessMsg] = useState("");
+
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
     if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -91,6 +94,11 @@ export default function PdfSplitPage() {
       a.click();
 
       URL.revokeObjectURL(url);
+
+      /* ✅ ADDED SUCCESS MESSAGE TRIGGER */
+      setSuccessMsg("✅ File downloaded successfully");
+      setTimeout(() => setSuccessMsg(""), 3000);
+
     } catch (err) {
       console.error(err);
       alert("Failed to split PDF");
@@ -198,6 +206,14 @@ export default function PdfSplitPage() {
       >
         {loading ? "Splitting PDF..." : "Split PDF"}
       </button>
+
+      {/* ✅ SUCCESS MESSAGE UI */}
+      {successMsg && (
+        <p className="text-green-600 text-sm mt-4 text-center font-medium">
+          {successMsg}
+        </p>
+      )}
+
     </div>
   );
 }

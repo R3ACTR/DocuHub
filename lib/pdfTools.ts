@@ -6,7 +6,7 @@ import {
   FileUp,
   Image as ImageIcon,
   RotateCw,
-  FileKey, // ✅ ADDED (for password remover icon)
+  FileKey,
 } from "lucide-react";
 
 export const PDF_TOOLS = Object.freeze([
@@ -17,8 +17,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/dashboard/pdf-merge",
     icon: Combine,
   },
-
-  // Document → PDF
   {
     id: "document-to-pdf",
     title: "Document to PDF",
@@ -26,8 +24,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/dashboard/document-to-pdf",
     icon: FileText,
   },
-
-  // JPEG → PDF
   {
     id: "jpeg-to-pdf",
     title: "JPEG to PDF",
@@ -35,8 +31,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/jpeg-to-pdf",
     icon: ImageIcon,
   },
-
-  // PNG → PDF
   {
     id: "png-to-pdf",
     title: "PNG to PDF",
@@ -44,7 +38,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/png-to-pdf",
     icon: ImageIcon,
   },
-
   {
     id: "pdf-compress",
     title: "Compress PDF",
@@ -52,7 +45,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-compress",
     icon: Minimize2,
   },
-
   {
     id: "pdf-split",
     title: "Split PDF",
@@ -60,15 +52,13 @@ export const PDF_TOOLS = Object.freeze([
     href: "/dashboard/pdf-split",
     icon: Scissors,
   },
-
   {
     id: "pdf-protect",
     title: "Protect PDF",
     description: "Add password protection",
-    href: "/dashboard/pdf-protect",
+    href: "/tool/pdf-protect",
     icon: FileText,
   },
-
   {
     id: "pdf-redact",
     title: "Redact PDF",
@@ -76,7 +66,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-redact",
     icon: FileUp,
   },
-
   {
     id: "metadata-viewer",
     title: "Metadata Viewer",
@@ -84,8 +73,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/metadata-viewer",
     icon: FileText,
   },
-
-  // Watermark Tool
   {
     id: "pdf-watermark",
     title: "Watermark PDF",
@@ -93,8 +80,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-watermark",
     icon: FileText,
   },
-
-  // Page Numbers Tool
   {
     id: "pdf-page-numbers",
     title: "Add Page Numbers",
@@ -102,8 +87,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-page-numbers",
     icon: FileText,
   },
-
-  // Extract Images Tool
   {
     id: "pdf-extract-images",
     title: "Extract Images",
@@ -111,8 +94,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-extract-images",
     icon: ImageIcon,
   },
-
-  // ✅ Rotate PDF Tool
   {
     id: "pdf-rotate",
     title: "Rotate PDF",
@@ -120,8 +101,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-rotate",
     icon: RotateCw,
   },
-
-  // ✅ Delete Pages Tool (YOUR EXISTING ADDITION)
   {
     id: "pdf-delete-pages",
     title: "Delete PDF Pages",
@@ -129,8 +108,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-delete-pages",
     icon: Scissors,
   },
-
-  // ✅ NEW — Reorder Pages Tool (NEW ADD ONLY)
   {
     id: "pdf-page-reorder",
     title: "Reorder PDF Pages",
@@ -138,8 +115,6 @@ export const PDF_TOOLS = Object.freeze([
     href: "/tool/pdf-page-reorder",
     icon: Scissors,
   },
-
-  // ✅ NEW — PDF Password Remover Tool (ADDED NOW)
   {
     id: "pdf-password-remover",
     title: "PDF Password Remover",
