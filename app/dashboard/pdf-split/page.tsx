@@ -135,9 +135,11 @@ export default function PdfSplitPage() {
           Upload a PDF and choose pages to split
         </p>
 
+        {/* ✅ REQUIRED ADDED HERE */}
         <input
           type="file"
           accept="application/pdf"
+          required
           onChange={(e) => {
             if (!e.target.files) return;
             setFiles([e.target.files[0]]);
@@ -203,7 +205,7 @@ export default function PdfSplitPage() {
         className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-indigo-500 outline-none"
       />
 
-      {/* ✅ UPDATED Split Button */}
+      {/* ✅ UPDATED BUTTON DISABLE LOGIC */}
       <button
         onClick={handleSplit}
         disabled={loading || !files.length || !pageRange}
