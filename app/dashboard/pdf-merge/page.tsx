@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { buildThreatWarning, scanUploadedFiles } from '@/lib/security/virusScan';
 import { toolToast } from '@/lib/toolToasts';
+import { protectPdfBytes } from '@/lib/pdfProtection';
 
 interface FileWithId {
   id: string;
@@ -43,9 +44,10 @@ export default function PdfMergePage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const [mergedPdfUrl, setMergedPdfUrl] = useState('');
-  const [securityWarning, setSecurityWarning] = useState('');
-  const [scanState, setScanState] = useState<'idle' | 'scanning' | 'clean' | 'threat'>('idle');
-  const [scanMessage, setScanMessage] = useState('');
+ const [encryptOutput, setEncryptOutput] = useState(false);                                                                                                    
+  const [encryptionPassword, setEncryptionPassword] = useState("");                                                                                             
+  const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");                                                                 
+  const [scanMessage, setScanMessage] = useState("");
   const [, forceUpdate] = useState(0);
 
   const getRelativeTime = (timestamp: number) => {
@@ -314,6 +316,10 @@ export default function PdfMergePage() {
       toolToast.warning('Please select at least 2 PDF files.');
       return;
     }
+    if (encryptOutput && !encryptionPassword.trim()) {
+      toolToast.warning('Enter a password to encrypt output file.');
+      return;
+    }
 
     setLoading(true);
     setUploadProgress(10);
@@ -334,9 +340,15 @@ export default function PdfMergePage() {
       }
 
       const mergedBytes = await mergedPdf.save();
+      let outputBytes = new Uint8Array(mergedBytes);
+      if (encryptOutput) {
+        outputBytes = new Uint8Array(
+          await protectPdfBytes(outputBytes, encryptionPassword.trim())
+        );
+      }
       setUploadProgress(95);
 
-      const blob = new Blob([new Uint8Array(mergedBytes)], {
+      const blob = new Blob([outputBytes], {
         type: 'application/pdf',
       });
 
@@ -352,7 +364,11 @@ export default function PdfMergePage() {
       a.click();
 
       setUploadProgress(100);
-      toolToast.success('File is ready for download.');
+      toolToast.success(
+        encryptOutput
+          ? 'Password-protected file is ready for download.'
+          : 'File is ready for download.'
+      );
     } catch (err) {
       console.error(err);
       toolToast.error('Processing failed. Could not merge PDFs.');
@@ -496,6 +512,26 @@ export default function PdfMergePage() {
             </button>
           </div>
 
+          <div className="pt-4 max-w-md mx-auto w-full">
+            <label className="flex items-center gap-2 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={encryptOutput}
+                onChange={(e) => setEncryptOutput(e.target.checked)}
+              />
+              Encrypt merged PDF before download
+            </label>
+            {encryptOutput && (
+              <input
+                type="password"
+                value={encryptionPassword}
+                onChange={(e) => setEncryptionPassword(e.target.value)}
+                placeholder="Set encryption password"
+                className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm"
+              />
+            )}
+          </div>
+
           {mergedPdfUrl && !loading && (
             <div className="pt-3 flex justify-center gap-3">
               <button
@@ -512,6 +548,11 @@ export default function PdfMergePage() {
                 <Printer className="w-4 h-4" />
                 Print
               </button>
+              {encryptOutput && (
+                <p className="self-center text-xs font-medium text-success">
+                  Password protected
+                </p>
+              )}
             </div>
           )}
         </div>

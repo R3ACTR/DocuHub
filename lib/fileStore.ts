@@ -6,6 +6,8 @@ let storedFiles: {
   type: string;
   file?: File;
   password?: string;
+  encryptOutput?: boolean;
+  outputPassword?: string;
 }[] = [];
 
 export type StoreFilesResult = {
@@ -15,7 +17,7 @@ export type StoreFilesResult = {
 
 export async function storeFiles(
   files: File[],
-  options?: { password?: string }
+  options?: { password?: string; encryptOutput?: boolean; outputPassword?: string }
 ): Promise<StoreFilesResult> {
   try {
     const MAX_FILES = 10;
@@ -47,6 +49,8 @@ export async function storeFiles(
             type: string;
             file?: File;
             password?: string;
+            encryptOutput?: boolean;
+            outputPassword?: string;
           }>((resolve, reject) => {
             const reader = new FileReader();
 
@@ -57,6 +61,8 @@ export async function storeFiles(
                 type: file.type,
                 file,
                 password: options?.password,
+                encryptOutput: options?.encryptOutput,
+                outputPassword: options?.outputPassword,
               });
 
             reader.onerror = reject;

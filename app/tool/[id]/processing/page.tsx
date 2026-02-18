@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2, CheckCircle, AlertCircle, Copy } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Tesseract from "tesseract.js";
 import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
@@ -17,11 +17,14 @@ type StoredFile = {
   type: string;
   file?: File;
   password?: string;
+  encryptOutput?: boolean;
+  outputPassword?: string;
 };
 
 type DownloadItem = {
   url: string;
   name: string;
+  isEncrypted?: boolean;
 };
 
 type CompressionApiResponse = {
@@ -83,6 +86,8 @@ export default function ProcessingPage() {
   );
   const [compressionUsesObjectStreams, setCompressionUsesObjectStreams] = useState(false);
   const [hasShownResultToast, setHasShownResultToast] = useState(false);
+  const encryptOutputEnabledRef = useRef(false);
+  const outputPasswordRef = useRef("");
 
   useEffect(() => {
     return () => {
@@ -107,6 +112,17 @@ export default function ProcessingPage() {
         router.push(`/tool/${toolId}`);
         return;
       }
+
+      const outputPassword = stored[0]?.outputPassword?.trim() || "";
+      const shouldEncryptOutput = toolId !== "pdf-protect" && Boolean(stored[0]?.encryptOutput);
+      if (shouldEncryptOutput && !outputPassword) {
+        setError("Output encryption password is missing.");
+        toolToast.error("Output encryption password is missing.");
+        setStatus("error");
+        return;
+      }
+      encryptOutputEnabledRef.current = shouldEncryptOutput;
+      outputPasswordRef.current = shouldEncryptOutput ? outputPassword : "";
 
       try {
         if (toolId === "ocr") {
@@ -223,10 +239,7 @@ export default function ProcessingPage() {
     setProgress(85);
     setCompressedSize(result.compressedBytes || finalBytes.length);
     setDownloadItems([
-      {
-        url: makeBlobUrl(finalBytes, "application/pdf"),
-        name: "compressed.pdf",
-      },
+      await buildDownloadItem(finalBytes, "application/pdf", "compressed.pdf"),
     ]);
     setProgress(100);
     setStatus("done");
@@ -255,10 +268,13 @@ export default function ProcessingPage() {
         });
       });
 
-      items.push({
-        url: makeBlobUrl(await pdf.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}-watermarked.pdf`,
-      });
+      items.push(
+        await buildDownloadItem(
+          await pdf.save(),
+          "application/pdf",
+          `${stripExtension(file.name)}-watermarked.pdf`,
+        ),
+      );
     }
 
     setDownloadItems(items);
@@ -275,10 +291,14 @@ export default function ProcessingPage() {
 
       const bytes = await readRawBytes(f);
       const encrypted = await protectPdfBytes(bytes, f.password);
-      items.push({
-        url: makeBlobUrl(new Uint8Array(encrypted), "application/pdf"),
-        name: `${stripExtension(f.name)}-protected.pdf`,
-      });
+      items.push(
+        await buildDownloadItem(
+          new Uint8Array(encrypted),
+          "application/pdf",
+          `${stripExtension(f.name)}-protected.pdf`,
+          { alreadyEncrypted: true },
+        ),
+      );
     }
 
     setDownloadItems(items);
@@ -301,10 +321,9 @@ export default function ProcessingPage() {
         height: image.height,
       });
 
-      items.push({
-        url: makeBlobUrl(await pdf.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}.pdf`,
-      });
+      items.push(
+        await buildDownloadItem(await pdf.save(), "application/pdf", `${stripExtension(file.name)}.pdf`),
+      );
     }
 
     setDownloadItems(items);
@@ -338,10 +357,11 @@ export default function ProcessingPage() {
     }
 
     setDownloadItems([
-      {
-        url: makeBlobUrl(await pdfDoc.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}-page-numbers.pdf`,
-      },
+      await buildDownloadItem(
+        await pdfDoc.save(),
+        "application/pdf",
+        `${stripExtension(file.name)}-page-numbers.pdf`,
+      ),
     ]);
     setStatus("done");
   };
@@ -375,10 +395,13 @@ export default function ProcessingPage() {
         page.setRotation(degrees((current + angle) % 360));
       });
 
-      items.push({
-        url: makeBlobUrl(await pdf.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}-rotated.pdf`,
-      });
+      items.push(
+        await buildDownloadItem(
+          await pdf.save(),
+          "application/pdf",
+          `${stripExtension(file.name)}-rotated.pdf`,
+        ),
+      );
     }
 
     setDownloadItems(items);
@@ -439,10 +462,7 @@ export default function ProcessingPage() {
     });
 
     setDownloadItems([
-      {
-        url: makeBlobUrl(result, "application/pdf"),
-        name: `${stripExtension(file.name)}-redacted.pdf`,
-      },
+      await buildDownloadItem(result, "application/pdf", `${stripExtension(file.name)}-redacted.pdf`),
     ]);
     setProgress(100);
     setStatus("done");
@@ -473,10 +493,7 @@ export default function ProcessingPage() {
     const json = JSON.stringify(metadata, null, 2);
     const jsonBytes = new TextEncoder().encode(json);
     setDownloadItems([
-      {
-        url: makeBlobUrl(jsonBytes, "application/json"),
-        name: `${stripExtension(file.name)}-metadata.json`,
-      },
+      await buildDownloadItem(jsonBytes, "application/json", `${stripExtension(file.name)}-metadata.json`),
     ]);
     setProgress(100);
     setStatus("done");
@@ -520,10 +537,13 @@ export default function ProcessingPage() {
       });
 
       const bytesOut = new Uint8Array(await blob.arrayBuffer());
-      items.push({
-        url: makeBlobUrl(bytesOut, mime),
-        name: `${stripExtension(file.name)}-page-${pageNumber}.${format}`,
-      });
+      items.push(
+        await buildDownloadItem(
+          bytesOut,
+          mime,
+          `${stripExtension(file.name)}-page-${pageNumber}.${format}`,
+        ),
+      );
     }
 
     canvas.width = 0;
@@ -561,10 +581,11 @@ export default function ProcessingPage() {
     pages.forEach((page) => outputPdf.addPage(page));
 
     setDownloadItems([
-      {
-        url: makeBlobUrl(await outputPdf.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}-pages-deleted.pdf`,
-      },
+      await buildDownloadItem(
+        await outputPdf.save(),
+        "application/pdf",
+        `${stripExtension(file.name)}-pages-deleted.pdf`,
+      ),
     ]);
     setStatus("done");
   };
@@ -595,10 +616,11 @@ export default function ProcessingPage() {
     pages.forEach((page) => outputPdf.addPage(page));
 
     setDownloadItems([
-      {
-        url: makeBlobUrl(await outputPdf.save(), "application/pdf"),
-        name: `${stripExtension(file.name)}-reordered.pdf`,
-      },
+      await buildDownloadItem(
+        await outputPdf.save(),
+        "application/pdf",
+        `${stripExtension(file.name)}-reordered.pdf`,
+      ),
     ]);
     setStatus("done");
   };
@@ -663,10 +685,7 @@ export default function ProcessingPage() {
     });
 
     setDownloadItems([
-      {
-        url: makeBlobUrl(unprotected, "application/pdf"),
-        name: `${stripExtension(file.name)}-unlocked.pdf`,
-      },
+      await buildDownloadItem(unprotected, "application/pdf", `${stripExtension(file.name)}-unlocked.pdf`),
     ]);
     setProgress(100);
     setStatus("done");
@@ -826,6 +845,27 @@ export default function ProcessingPage() {
     return URL.createObjectURL(new Blob([normalized.buffer as any], { type }));
   };
 
+  const buildDownloadItem = async (
+    bytes: Uint8Array,
+    type: string,
+    name: string,
+    options?: { alreadyEncrypted?: boolean },
+  ): Promise<DownloadItem> => {
+    let outputBytes = bytes;
+    let isEncrypted = Boolean(options?.alreadyEncrypted);
+
+    if (type === "application/pdf" && !isEncrypted && encryptOutputEnabledRef.current) {
+      outputBytes = new Uint8Array(await protectPdfBytes(bytes, outputPasswordRef.current));
+      isEncrypted = true;
+    }
+
+    return {
+      url: makeBlobUrl(outputBytes, type),
+      name,
+      isEncrypted,
+    };
+  };
+
   const stripExtension = (name: string) => name.replace(/\.[^/.]+$/, "");
 
   const download = (item: DownloadItem, index: number) => {
@@ -853,10 +893,15 @@ export default function ProcessingPage() {
   useEffect(() => {
     if (status !== "done" || hasShownResultToast) return;
     if (downloadItems.length > 0) {
+      const protectedCount = downloadItems.filter((item) => item.isEncrypted).length;
       toolToast.success(
-        downloadItems.length === 1
-          ? "File is ready for download."
-          : `${downloadItems.length} files are ready for download.`,
+        protectedCount > 0
+          ? protectedCount === 1
+            ? "Password-protected file is ready for download."
+            : `${protectedCount} password-protected files are ready for download.`
+          : downloadItems.length === 1
+            ? "File is ready for download."
+            : `${downloadItems.length} files are ready for download.`,
       );
     } else {
       toolToast.success("Processing completed successfully.");
@@ -920,6 +965,11 @@ export default function ProcessingPage() {
               >
                 {copiedDownloadIndex === index ? "Copied PDF URL!" : "Copy PDF URL"}
               </button>
+            )}
+            {item.isEncrypted && (
+              <p className="mt-2 text-xs font-medium text-success">
+                Password protected
+              </p>
             )}
           </div>
         ))}

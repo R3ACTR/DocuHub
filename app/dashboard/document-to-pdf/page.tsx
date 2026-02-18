@@ -1,5 +1,4 @@
-                                                                                                                                                                                                                                                                              
- "use client";
+"use client";                                                                                                                                                 
                                                                                                                                                                 
   import { useRef, useState } from "react";                                                                                                                     
   import { PDFDocument, StandardFonts } from "pdf-lib";                                                                                                         
@@ -7,6 +6,7 @@
   import * as mammoth from "mammoth";                                                                                                                           
   import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";                                                                             
   import { toolToast } from "@/lib/toolToasts";                                                                                                                 
+  import { protectPdfBytes } from "@/lib/pdfProtection";                                                                                                        
                                                                                                                                                                 
   function sanitizeForWinAnsi(text: string, font: PDFFont) {                                                                                                    
     let result = "";                                                                                                                                            
@@ -29,7 +29,7 @@
       fileName,                                                                                                                                                 
       tool,                                                                                                                                                     
       time: new Date().toLocaleString(),                                                                                                                        
-      link: "/dashboard/document-to-pdf",                                                                                                                       
+      link: "/dashboard/document-to-pdf",
     };                                                                                                                                                          
                                                                                                                                                                 
     files.unshift(newEntry);                                                                                                                                    
@@ -45,6 +45,8 @@
     const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");                                                               
     const [scanMessage, setScanMessage] = useState("");                                                                                                         
     const [isDragging, setIsDragging] = useState(false);                                                                                                        
+    const [encryptOutput, setEncryptOutput] = useState(false);                                                                                                  
+    const [encryptionPassword, setEncryptionPassword] = useState("");                                                                                           
     const fileInputRef = useRef<HTMLInputElement>(null);                                                                                                        
                                                                                                                                                                 
     const ALLOWED_TYPES = [".txt", ".html", ".json", ".docx"];                                                                                                  
@@ -52,7 +54,7 @@
     const isValidFileType = (fileName?: string) => {                                                                                                            
       if (!fileName) return false;                                                                                                                              
       return ALLOWED_TYPES.some((ext) => fileName.toLowerCase().endsWith(ext));                                                                                 
-    };                                                                                                                                                          
+    };
                                                                                                                                                                 
     const processSelectedFiles = async (incomingFiles: File[]) => {                                                                                             
       if (!incomingFiles.length) return;                                                                                                                        
@@ -62,7 +64,7 @@
                                                                                                                                                                 
       for (const file of incomingFiles) {                                                                                                                       
         if (isValidFileType(file.name)) {                                                                                                                       
-          validFiles.push(file);
+          validFiles.push(file);                                                                                                                                
         } else {                                                                                                                                                
           invalidFileNames.push(file.name);                                                                                                                     
         }                                                                                                                                                       
@@ -94,21 +96,21 @@
               (f) =>                                                                                                                                            
                 f.name === file.name &&                                                                                                                         
                 f.size === file.size &&                                                                                                                         
-                f.lastModified === file.lastModified                                                                                                            
-            ) === index                                                                                                                                         
+                f.lastModified === file.lastModified,                                                                                                           
+            ) === index,                                                                                                                                        
         );                                                                                                                                                      
       });                                                                                                                                                       
                                                                                                                                                                 
       const warnings: string[] = [];                                                                                                                            
       if (invalidFileNames.length) {                                                                                                                            
         warnings.push(                                                                                                                                          
-          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`                                                 
+          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`,                                                
         );                                                                                                                                                      
         toolToast.warning("Some files were skipped. Use TXT, HTML, JSON, or DOCX.");                                                                            
       }                                                                                                                                                         
                                                                                                                                                                 
       if (threats.length) {                                                                                                                                     
-        warnings.push(buildThreatWarning(threats));                                                                                                             
+        warnings.push(buildThreatWarning(threats));
         toolToast.warning("Some files were blocked by security scan.");                                                                                         
       }                                                                                                                                                         
                                                                                                                                                                 
@@ -130,7 +132,7 @@
       if (!cleanFiles.length) {                                                                                                                                 
         const warning = buildThreatWarning(threats) || "Security scan failed.";                                                                                 
         setFiles([]);                                                                                                                                           
-        setError(warning);
+        setError(warning);                                                                                                                                      
         setScanState("threat");                                                                                                                                 
         setScanMessage(warning);                                                                                                                                
         toolToast.error("Scan failed. No safe files available.");                                                                                               
@@ -143,7 +145,7 @@
         setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);                                                                        
         toolToast.warning(`${threats.length} unsafe file(s) were blocked.`);                                                                                    
       } else {                                                                                                                                                  
-        setScanMessage("Scan complete. No threats detected.");                                                                                                  
+        setScanMessage("Scan complete. No threats detected.");
         toolToast.success("Scan complete. No threats detected.");                                                                                               
       }                                                                                                                                                         
       setScanState("clean");                                                                                                                                    
@@ -175,7 +177,7 @@
       setError("");                                                                                                                                             
       setScanState("idle");                                                                                                                                     
       setScanMessage("");                                                                                                                                       
-      if (fileInputRef.current) {
+      if (fileInputRef.current) {                                                                                                                               
         fileInputRef.current.value = "";                                                                                                                        
       }                                                                                                                                                         
     };                                                                                                                                                          
@@ -188,7 +190,7 @@
         const result = await mammoth.extractRawText({ arrayBuffer });                                                                                           
         text = result.value || "";                                                                                                                              
       } else {                                                                                                                                                  
-        text = await file.text();                                                                                                                               
+        text = await file.text();
       }                                                                                                                                                         
                                                                                                                                                                 
       if (!text || text.trim().length === 0) {                                                                                                                  
@@ -230,7 +232,7 @@
         page.drawText(line, {                                                                                                                                   
           x: margin,                                                                                                                                            
           y,                                                                                                                                                    
-          size: fontSize,
+          size: fontSize,                                                                                                                                       
           font,                                                                                                                                                 
         });                                                                                                                                                     
                                                                                                                                                                 
@@ -239,24 +241,28 @@
                                                                                                                                                                 
       return new Uint8Array(await pdfDoc.save());                                                                                                               
     };                                                                                                                                                          
-                                                                                                                                                                
+
     const downloadPdf = (pdfBytes: Uint8Array, sourceFileName: string) => {                                                                                     
-      const blob = new Blob([pdfBytes as any], { type: "application/pdf" });                                                                                           
+      const blob = new Blob([pdfBytes], { type: "application/pdf" });                                                                                           
       const url = URL.createObjectURL(blob);                                                                                                                    
                                                                                                                                                                 
       const a = document.createElement("a");                                                                                                                    
       a.href = url;                                                                                                                                             
       a.download = sourceFileName.replace(/\.[^/.]+$/, "") + ".pdf";                                                                                            
       a.click();                                                                                                                                                
-
+                                                                                                                                                                
       URL.revokeObjectURL(url);                                                                                                                                 
-    };
+    };                                                                                                                                                          
                                                                                                                                                                 
     const handleConvert = async () => {                                                                                                                         
       if (!files.length) return;                                                                                                                                
       if (scanState !== "clean") {                                                                                                                              
         setError('Please click "Scan Files" before converting.');                                                                                               
         toolToast.warning('Please click "Scan Files" before converting.');                                                                                      
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+      if (encryptOutput && !encryptionPassword.trim()) {                                                                                                        
+        toolToast.warning("Enter a password to encrypt output files.");                                                                                         
         return;                                                                                                                                                 
       }                                                                                                                                                         
                                                                                                                                                                 
@@ -269,18 +275,25 @@
           files.map(async (file) => ({                                                                                                                          
             file,                                                                                                                                               
             pdfBytes: await convertFileToPdf(file),                                                                                                             
-          }))                                                                                                                                                   
+          })),                                                                                                                                                  
         );                                                                                                                                                      
                                                                                                                                                                 
         for (const { file, pdfBytes } of conversionResults) {                                                                                                   
-          downloadPdf(pdfBytes, file.name);                                                                                                                     
+          const outputBytes = encryptOutput                                                                                                                     
+            ? new Uint8Array(await protectPdfBytes(pdfBytes, encryptionPassword.trim()))                                                                        
+            : pdfBytes;                                                                                                                                         
+          downloadPdf(outputBytes, file.name);                                                                                                                  
           saveRecentFile(file.name, "Document to PDF");                                                                                                         
         }                                                                                                                                                       
                                                                                                                                                                 
         toolToast.success(                                                                                                                                      
-          conversionResults.length === 1                                                                                                                        
-            ? "File is ready for download."                                                                                                                     
-            : `${conversionResults.length} files are ready for download.`                                                                                       
+          encryptOutput                                                                                                                                         
+            ? conversionResults.length === 1                                                                                                                    
+              ? "Password-protected file is ready for download."                                                                                                
+              : `${conversionResults.length} password-protected files are ready for download.`                                                                  
+            : conversionResults.length === 1                                                                                                                    
+              ? "File is ready for download."                                                                                                                   
+              : `${conversionResults.length} files are ready for download.`,                                                                                    
         );                                                                                                                                                      
       } catch (err) {                                                                                                                                           
         console.error(err);                                                                                                                                     
@@ -337,7 +350,7 @@
                 <div                                                                                                                                            
                   key={`${file.name}-${file.size}-${file.lastModified}`}                                                                                        
                   className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"                                               
-                >                                                                                                                                               
+                >
                   <span className="truncate">{file.name}</span>                                                                                                 
                   <button                                                                                                                                       
                     onClick={() => handleRemoveFile(index)}                                                                                                     
@@ -346,7 +359,7 @@
                     Remove                                                                                                                                      
                   </button>                                                                                                                                     
                 </div>                                                                                                                                          
-              ))}
+              ))}                                                                                                                                               
             </div>                                                                                                                                              
                                                                                                                                                                 
             <button                                                                                                                                             
@@ -354,9 +367,29 @@
               className="mt-3 rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:bg-muted"                                                 
             >                                                                                                                                                   
               Clear all                                                                                                                                         
-            </button>
+            </button>                                                                                                                                           
           </>                                                                                                                                                   
         )}                                                                                                                                                      
+                                                                                                                                                                
+        <div className="mt-4 rounded-lg border border-border p-3">                                                                                              
+          <label className="flex items-center gap-2 text-sm font-medium">                                                                                       
+            <input                                                                                                                                              
+              type="checkbox"                                                                                                                                   
+              checked={encryptOutput}                                                                                                                           
+              onChange={(e) => setEncryptOutput(e.target.checked)}                                                                                              
+            />                                                                                                                                                  
+            Encrypt output PDF before download                                                                                                                  
+          </label>                                                                                                                                              
+          {encryptOutput && (                                                                                                                                   
+            <input                                                                                                                                              
+              type="password"                                                                                                                                   
+              value={encryptionPassword}                                                                                                                        
+              onChange={(e) => setEncryptionPassword(e.target.value)}
+              placeholder="Set encryption password"                                                                                                             
+              className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                         
+            />                                                                                                                                                  
+          )}                                                                                                                                                    
+        </div>                                                                                                                                                  
                                                                                                                                                                 
         <button                                                                                                                                                 
           onClick={runScan}                                                                                                                                     
@@ -372,9 +405,17 @@
                                                                                                                                                                 
         <button                                                                                                                                                 
           onClick={handleConvert}                                                                                                                               
-          disabled={loading || files.length === 0 || scanState !== "clean"}                                                                                     
+          disabled={                                                                                                                                            
+            loading ||                                                                                                                                          
+            files.length === 0 ||                                                                                                                               
+            scanState !== "clean" ||
+            (encryptOutput && !encryptionPassword.trim())                                                                                                       
+          }                                                                                                                                                     
           className={`mt-3 rounded-lg px-6 py-3 ${                                                                                                              
-            loading || files.length === 0 || scanState !== "clean"                                                                                              
+            loading ||                                                                                                                                          
+            files.length === 0 ||                                                                                                                               
+            scanState !== "clean" ||                                                                                                                            
+            (encryptOutput && !encryptionPassword.trim())                                                                                                       
               ? "cursor-not-allowed bg-muted text-muted-foreground"                                                                                             
               : "bg-primary text-primary-foreground hover:opacity-90"                                                                                           
           }`}                                                                                                                                                   
@@ -383,4 +424,4 @@
         </button>                                                                                                                                               
       </div>                                                                                                                                                    
     );                                                                                                                                                          
-  } 
+  }
