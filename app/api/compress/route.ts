@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
+import { scanBytesForThreat } from "@/lib/security/virusScan";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,13 @@ export async function POST(request: NextRequest) {
     }
 
     const sourceBytes = new Uint8Array(await file.arrayBuffer());
+    const threatScan = scanBytesForThreat(sourceBytes, file.name, file.type);
+    if (!threatScan.safe) {
+      return NextResponse.json(
+        { error: threatScan.threat || "Security scan failed for uploaded file." },
+        { status: 400 },
+      );
+    }
     await assertPdfReadable(sourceBytes);
 
     const candidates = await buildCandidates(sourceBytes, level);

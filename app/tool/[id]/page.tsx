@@ -16,6 +16,8 @@
   import { useEffect, useRef, useState } from "react";                                                                                                          
   import { motion } from "framer-motion";                                                                                                                       
   import { clearStoredFiles, storeFiles } from "@/lib/fileStore";
+  import { getFileCategory, formatFileSize } from "@/lib/utils";
+  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
   import { toolToast } from "@/lib/toolToasts";
                                                                                                                                                                 
   import { saveToolState, clearToolState } from "@/lib/toolStateStorage";                                                                                       
@@ -122,6 +124,8 @@
     const [previewText, setPreviewText] = useState("");                                                                                                         
     const [isPreviewLoading, setIsPreviewLoading] = useState(false);                                                                                            
     const [fileError, setFileError] = useState<string | null>(null);                                                                                            
+    const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");
+    const [scanMessage, setScanMessage] = useState<string | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);                                                                                                    
     const [hasUnsavedWork, setHasUnsavedWork] = useState(false);                                                                                                
                                                                                                                                                                 
@@ -344,12 +348,59 @@
                                                                                                                                                                 
       setFileError(null);
       setSelectedFiles(validFiles);
+      setScanState("idle");
+      setScanMessage('Click "Scan Files" before processing.');
       setHasUnsavedWork(true);
       toolToast.info(`${validFiles.length} file(s) ready to process.`);
     };
 
+    const runSecurityScan = async (filesToScan: File[]) => {
+      if (!filesToScan.length) {
+        setScanState("idle");
+        setScanMessage(null);
+        return false;
+      }
+
+      setScanState("scanning");
+      setScanMessage("Scanning files...");
+      toolToast.info("Scanning files...");
+
+      const { cleanFiles, threats } = await scanUploadedFiles(filesToScan);
+      if (!cleanFiles.length) {
+        const warning = buildThreatWarning(threats) || "Security scan failed.";
+        setSelectedFiles([]);
+        setFileError(warning);
+        setScanState("threat");
+        setScanMessage(warning);
+        toolToast.error("All selected files were blocked by security scan.");
+        return false;
+      }
+
+      if (threats.length) {
+        const warning = buildThreatWarning(threats);
+        setFileError(warning);
+        setScanState("clean");
+        setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
+        toolToast.warning("Some files were blocked by security scan.");
+      } else {
+        setFileError(null);
+        setScanState("clean");
+        setScanMessage("Scan complete. No threats detected.");
+        toolToast.success("Scan complete. No threats detected.");
+      }
+
+      setSelectedFiles(cleanFiles);
+      return true;
+    };
+
     const handleProcessFile = async () => {
       if (!selectedFiles.length) return;
+      if (scanState !== "clean") {
+        const message = 'Please click "Scan Files" and wait for a clean result.';
+        setFileError(message);
+        toolToast.warning(message);
+        return;
+      }
       if (toolId === "pdf-protect" && !protectPassword.trim()) {
         const message = "Enter a password to continue.";
         setFileError(message);
@@ -481,6 +532,7 @@
     const canProcess =
       selectedFiles.length > 0 &&
       !isProcessing &&
+      scanState === "clean" &&
       !(toolId === "pdf-protect" && !protectPassword.trim()) &&
       !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&
       !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&
@@ -915,23 +967,48 @@
                 )}                                                                                                                                              
               </div>                                                                                                                                            
                                                                                                                                                                 
-              <p className="text-xs text-gray-500">                                                                                                             
-                Verify your files before processing. You can replace, remove, or cancel.                                                                        
-              </p>                                                                                                                                              
-                                                                                                                                                                
-              {fileError && <p className="text-sm text-red-600">{fileError}</p>}                                                                                
-                                                                                                                                                                
-              <div className="flex flex-col gap-3 sm:flex-row">                                                                                                 
-                <button                                                                                                                                         
+              <p className="text-xs text-gray-500">
+                Verify your files before processing. You can replace, remove, or cancel.
+              </p>
+
+              {fileError && <p className="text-sm text-red-600">{fileError}</p>}
+              {scanMessage && (
+                <p
+                  className={`text-sm ${
+                    scanState === "clean"
+                      ? "text-green-700"
+                      : scanState === "threat"
+                        ? "text-red-600"
+                        : "text-gray-600"
+                  }`}
+                >
+                  {scanMessage}
+                </p>
+              )}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
                   type="button"                                                                                                                                 
                   onClick={() => fileInputRef.current?.click()}                                                                                                 
-                  className="w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"                                 
-                >                                                                                                                                               
-                  Replace File                                                                                                                                  
-                </button>                                                                                                                                       
-                <button                                                                                                                                         
-                  type="button"                                                                                                                                 
-                  onClick={handleProcessFile}                                                                                                                   
+                  className="w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"
+                >
+                  Replace File
+                </button>
+                <button
+                  type="button"
+                  onClick={() => runSecurityScan(selectedFiles)}
+                  disabled={!selectedFiles.length || isProcessing || scanState === "scanning"}
+                  className={`w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium transition ${
+                    selectedFiles.length && !isProcessing && scanState !== "scanning"
+                      ? "border border-black text-black hover:bg-gray-100"
+                      : "border border-gray-300 text-gray-500 cursor-not-allowed"
+                  }`}
+                >
+                  {scanState === "scanning" ? "Scanning..." : "Scan Files"}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleProcessFile}
                   disabled={!canProcess}                                                                                                                        
                   className={`w-full sm:flex-1 py-3 rounded-lg text-sm font-medium transition ${                                                                
                     canProcess                                                                                                                                  

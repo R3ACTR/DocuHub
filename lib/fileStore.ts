@@ -1,3 +1,5 @@
+import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
+
 let storedFiles: {
   data: string;
   name: string;
@@ -27,8 +29,19 @@ export async function storeFiles(
       };
     }
 
+    const { cleanFiles, threats } = await scanUploadedFiles(files);
+    if (!cleanFiles.length) {
+      const msg = buildThreatWarning(threats) || "Security scan failed";
+      alert(msg);
+      return { ok: false, error: msg };
+    }
+
+    if (threats.length) {
+      alert(buildThreatWarning(threats));
+    }
+
     const results = await Promise.all(
-      files.map(
+      cleanFiles.map(
         (file) =>
           new Promise<{
             data: string;

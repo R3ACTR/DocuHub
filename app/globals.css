@@ -217,7 +217,41 @@ body {
 }
 
 .glass-card {
-  background: var(--card);
-  backdrop-filter: blur(12px);
-  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--card) 70%, transparent);
+  backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid color-mix(in srgb, var(--border) 40%, transparent);
+  box-shadow: var(--shadow-premium);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.glass-card:hover {
+  box-shadow: var(--shadow-premium-hover);
+  transform: translateY(-2px);
+  background: color-mix(in srgb, var(--card) 80%, transparent);
+}
+
+.mesh-gradient {
+  background-color: var(--background);
+  background-image: 
+    radial-gradient(at 0% 0%, color-mix(in srgb, var(--primary) 15%, transparent) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, color-mix(in srgb, var(--accent) 10%, transparent) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, color-mix(in srgb, var(--primary) 15%, transparent) 0px, transparent 50%);
+}
+
+.text-gradient {
+  background: linear-gradient(to right, var(--primary), var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.premium-button {
+  @apply inline-flex items-center justify-center transition-all duration-300;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.premium-button:hover {
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--primary) 30%, transparent);
+  transform: translateY(-1px);
 }

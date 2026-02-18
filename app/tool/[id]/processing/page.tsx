@@ -7,6 +7,7 @@ import Tesseract from "tesseract.js";
 import { getStoredFiles, clearStoredFiles } from "@/lib/fileStore";
 import { PDFDocument, rgb, degrees } from "pdf-lib";
 import { protectPdfBytes } from "@/lib/pdfProtection";
+import { scanBytesForThreat } from "@/lib/security/virusScan";
 import ToolFeedbackPrompt from "@/components/ToolFeedbackPrompt";
 import { toolToast } from "@/lib/toolToasts";
 
@@ -201,7 +202,7 @@ export default function ProcessingPage() {
     const payload = new FormData();
     payload.append(
       "file",
-      new File([sourceBytes], file.name || "upload.pdf", {
+      new File([sourceBytes as any], file.name || "upload.pdf", {
         type: file.type || "application/pdf",
       }),
     );
@@ -435,7 +436,7 @@ export default function ProcessingPage() {
       await page.render({
         canvasContext: context,
         viewport,
-      }).promise;
+      } as any).promise;
 
       const pngBlob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
@@ -525,7 +526,7 @@ export default function ProcessingPage() {
       canvas.height = Math.max(1, Math.floor(viewport.height));
       context.fillStyle = "#ffffff";
       context.fillRect(0, 0, canvas.width, canvas.height);
-      await page.render({ canvasContext: context, viewport }).promise;
+      await page.render({ canvasContext: context, viewport } as any).promise;
 
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
@@ -658,7 +659,7 @@ export default function ProcessingPage() {
       await page.render({
         canvasContext: context,
         viewport,
-      }).promise;
+      } as any).promise;
 
       const pngBlob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob(
@@ -711,24 +712,32 @@ export default function ProcessingPage() {
   };
 
   const readRawBytes = async (file: StoredFile) => {
+    let bytes: Uint8Array;
+
     if (file.file) {
-      return new Uint8Array(await file.file.arrayBuffer());
-    }
-
-    if (!file.data) {
-      throw new Error("Missing file data.");
-    }
-
-    const payload = file.data.trim();
-    if (payload.startsWith("data:") || payload.startsWith("blob:")) {
-      const response = await fetch(payload);
-      if (!response.ok) {
-        throw new Error("Failed to load stored file data.");
+      bytes = new Uint8Array(await file.file.arrayBuffer());
+    } else {
+      if (!file.data) {
+        throw new Error("Missing file data.");
       }
-      return new Uint8Array(await response.arrayBuffer());
+
+      const payload = file.data.trim();
+      if (payload.startsWith("data:") || payload.startsWith("blob:")) {
+        const response = await fetch(payload);
+        if (!response.ok) {
+          throw new Error("Failed to load stored file data.");
+        }
+        bytes = new Uint8Array(await response.arrayBuffer());
+      } else {
+        bytes = decodeBase64Payload(payload);
+      }
     }
 
-    return decodeBase64Payload(payload);
+    const threatScan = scanBytesForThreat(bytes, file.name || "upload", file.type);
+    if (!threatScan.safe) {
+      throw new Error(threatScan.threat || "Security scan failed for uploaded file.");
+    }
+    return bytes;
   };
 
   const decodeBase64Payload = (value: string) => {
@@ -753,7 +762,7 @@ export default function ProcessingPage() {
       disableStream: true,
       filename: fileName,
       password,
-    });
+    } as any);
     return loadingTask.promise;
   };
 
@@ -833,7 +842,7 @@ export default function ProcessingPage() {
   const makeBlobUrl = (bytes: Uint8Array, type: string) => {
     const normalized = new Uint8Array(bytes.byteLength);
     normalized.set(bytes);
-    return URL.createObjectURL(new Blob([normalized.buffer], { type }));
+    return URL.createObjectURL(new Blob([normalized.buffer as any], { type }));
   };
 
   const buildDownloadItem = async (

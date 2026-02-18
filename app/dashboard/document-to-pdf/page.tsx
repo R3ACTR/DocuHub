@@ -1,11 +1,12 @@
-"use client";
+"use client";                                                                                                                                                 
                                                                                                                                                                 
   import { useRef, useState } from "react";                                                                                                                     
   import { PDFDocument, StandardFonts } from "pdf-lib";                                                                                                         
   import type { PDFFont } from "pdf-lib";                                                                                                                       
   import * as mammoth from "mammoth";                                                                                                                           
-  import { toolToast } from "@/lib/toolToasts";
-  import { protectPdfBytes } from "@/lib/pdfProtection";
+  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";                                                                             
+  import { toolToast } from "@/lib/toolToasts";                                                                                                                 
+  import { protectPdfBytes } from "@/lib/pdfProtection";                                                                                                        
                                                                                                                                                                 
   function sanitizeForWinAnsi(text: string, font: PDFFont) {                                                                                                    
     let result = "";                                                                                                                                            
@@ -28,7 +29,7 @@
       fileName,                                                                                                                                                 
       tool,                                                                                                                                                     
       time: new Date().toLocaleString(),                                                                                                                        
-      link: "/dashboard/document-to-pdf",                                                                                                                       
+      link: "/dashboard/document-to-pdf",
     };                                                                                                                                                          
                                                                                                                                                                 
     files.unshift(newEntry);                                                                                                                                    
@@ -41,19 +42,21 @@
     const [files, setFiles] = useState<File[]>([]);                                                                                                             
     const [loading, setLoading] = useState(false);                                                                                                              
     const [error, setError] = useState("");                                                                                                                     
+    const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");                                                               
+    const [scanMessage, setScanMessage] = useState("");                                                                                                         
     const [isDragging, setIsDragging] = useState(false);                                                                                                        
-    const [encryptOutput, setEncryptOutput] = useState(false);
-    const [encryptionPassword, setEncryptionPassword] = useState("");
+    const [encryptOutput, setEncryptOutput] = useState(false);                                                                                                  
+    const [encryptionPassword, setEncryptionPassword] = useState("");                                                                                           
     const fileInputRef = useRef<HTMLInputElement>(null);                                                                                                        
                                                                                                                                                                 
     const ALLOWED_TYPES = [".txt", ".html", ".json", ".docx"];                                                                                                  
                                                                                                                                                                 
-    const isValidFileType = (fileName?: string) => {
+    const isValidFileType = (fileName?: string) => {                                                                                                            
       if (!fileName) return false;                                                                                                                              
       return ALLOWED_TYPES.some((ext) => fileName.toLowerCase().endsWith(ext));                                                                                 
-    };                                                                                                                                                          
+    };
                                                                                                                                                                 
-    const processSelectedFiles = (incomingFiles: File[]) => {                                                                                                   
+    const processSelectedFiles = async (incomingFiles: File[]) => {                                                                                             
       if (!incomingFiles.length) return;                                                                                                                        
                                                                                                                                                                 
       const validFiles: File[] = [];                                                                                                                            
@@ -68,56 +71,112 @@
       }                                                                                                                                                         
                                                                                                                                                                 
       if (!validFiles.length) {                                                                                                                                 
-        const message = "Unsupported file type. Please upload: .txt, .html, .json, .docx";
-        setError(message);
-        toolToast.warning("Unsupported format. Use TXT, HTML, JSON, or DOCX.");
+        const message = "Unsupported file type. Please upload: .txt, .html, .json, .docx";                                                                      
+        setError(message);                                                                                                                                      
+        toolToast.warning("Unsupported format. Use TXT, HTML, JSON, or DOCX.");                                                                                 
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+                                                                                                                                                                
+      const { cleanFiles, threats } = await scanUploadedFiles(validFiles);                                                                                      
+                                                                                                                                                                
+      if (!cleanFiles.length) {                                                                                                                                 
+        const warning = buildThreatWarning(threats) || "All selected files were blocked.";                                                                      
+        setError(warning);                                                                                                                                      
+        setScanState("threat");                                                                                                                                 
+        setScanMessage(warning);                                                                                                                                
+        toolToast.error("All selected files were blocked by security scan.");                                                                                   
         return;                                                                                                                                                 
       }                                                                                                                                                         
                                                                                                                                                                 
       setFiles((prev) => {                                                                                                                                      
-        const merged = [...prev, ...validFiles];                                                                                                                
+        const merged = [...prev, ...cleanFiles];                                                                                                                
         return merged.filter(                                                                                                                                   
           (file, index, arr) =>                                                                                                                                 
             arr.findIndex(                                                                                                                                      
               (f) =>                                                                                                                                            
                 f.name === file.name &&                                                                                                                         
                 f.size === file.size &&                                                                                                                         
-                f.lastModified === file.lastModified                                                                                                            
-            ) === index                                                                                                                                         
+                f.lastModified === file.lastModified,                                                                                                           
+            ) === index,                                                                                                                                        
         );                                                                                                                                                      
       });                                                                                                                                                       
                                                                                                                                                                 
+      const warnings: string[] = [];                                                                                                                            
       if (invalidFileNames.length) {                                                                                                                            
-        const message = `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`;
-        setError(message);
-        toolToast.warning("Some files were skipped. Use TXT, HTML, JSON, or DOCX.");
-        return;                                                                                                                                                 
+        warnings.push(                                                                                                                                          
+          `Ignored unsupported files: ${invalidFileNames.join(", ")}. Allowed types: .txt, .html, .json, .docx`,                                                
+        );                                                                                                                                                      
+        toolToast.warning("Some files were skipped. Use TXT, HTML, JSON, or DOCX.");                                                                            
       }                                                                                                                                                         
-
-      setError("");                                                                                                                                             
+                                                                                                                                                                
+      if (threats.length) {                                                                                                                                     
+        warnings.push(buildThreatWarning(threats));
+        toolToast.warning("Some files were blocked by security scan.");                                                                                         
+      }                                                                                                                                                         
+                                                                                                                                                                
+      setError(warnings.join(" ").trim());                                                                                                                      
+      setScanState("idle");                                                                                                                                     
+      setScanMessage('Click "Scan Files" before converting.');                                                                                                  
     };                                                                                                                                                          
                                                                                                                                                                 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {                                                                                      
+    const runScan = async () => {                                                                                                                               
+      if (!files.length) return;                                                                                                                                
+                                                                                                                                                                
+      setScanState("scanning");                                                                                                                                 
+      setScanMessage("Scanning files...");                                                                                                                      
+      setError("");                                                                                                                                             
+      toolToast.info("Scanning files...");                                                                                                                      
+                                                                                                                                                                
+      const { cleanFiles, threats } = await scanUploadedFiles(files);                                                                                           
+                                                                                                                                                                
+      if (!cleanFiles.length) {                                                                                                                                 
+        const warning = buildThreatWarning(threats) || "Security scan failed.";                                                                                 
+        setFiles([]);                                                                                                                                           
+        setError(warning);                                                                                                                                      
+        setScanState("threat");                                                                                                                                 
+        setScanMessage(warning);                                                                                                                                
+        toolToast.error("Scan failed. No safe files available.");                                                                                               
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+                                                                                                                                                                
+      setFiles(cleanFiles);                                                                                                                                     
+      if (threats.length) {                                                                                                                                     
+        setError(buildThreatWarning(threats));                                                                                                                  
+        setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);                                                                        
+        toolToast.warning(`${threats.length} unsafe file(s) were blocked.`);                                                                                    
+      } else {                                                                                                                                                  
+        setScanMessage("Scan complete. No threats detected.");
+        toolToast.success("Scan complete. No threats detected.");                                                                                               
+      }                                                                                                                                                         
+      setScanState("clean");                                                                                                                                    
+    };                                                                                                                                                          
+                                                                                                                                                                
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {                                                                                
       if (!e.target.files?.length) return;                                                                                                                      
-      processSelectedFiles(Array.from(e.target.files));                                                                                                         
+      await processSelectedFiles(Array.from(e.target.files));                                                                                                   
       e.target.value = "";                                                                                                                                      
     };                                                                                                                                                          
                                                                                                                                                                 
-    const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {                                                                                                
+    const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {                                                                                          
       e.preventDefault();                                                                                                                                       
       setIsDragging(false);                                                                                                                                     
                                                                                                                                                                 
       if (!e.dataTransfer.files?.length) return;                                                                                                                
-      processSelectedFiles(Array.from(e.dataTransfer.files));                                                                                                   
+      await processSelectedFiles(Array.from(e.dataTransfer.files));                                                                                             
     };                                                                                                                                                          
                                                                                                                                                                 
     const handleRemoveFile = (indexToRemove: number) => {                                                                                                       
       setFiles((prev) => prev.filter((_, index) => index !== indexToRemove));                                                                                   
+      setScanState("idle");                                                                                                                                     
+      setScanMessage('Click "Scan Files" before converting.');                                                                                                  
+      setError("");                                                                                                                                             
     };                                                                                                                                                          
                                                                                                                                                                 
     const clearSelection = () => {                                                                                                                              
       setFiles([]);                                                                                                                                             
       setError("");                                                                                                                                             
+      setScanState("idle");                                                                                                                                     
+      setScanMessage("");                                                                                                                                       
       if (fileInputRef.current) {                                                                                                                               
         fileInputRef.current.value = "";                                                                                                                        
       }                                                                                                                                                         
@@ -129,9 +188,9 @@
       if (file.name.toLowerCase().endsWith(".docx")) {                                                                                                          
         const arrayBuffer = await file.arrayBuffer();                                                                                                           
         const result = await mammoth.extractRawText({ arrayBuffer });                                                                                           
-        text = result.value || "";
+        text = result.value || "";                                                                                                                              
       } else {                                                                                                                                                  
-        text = await file.text();                                                                                                                               
+        text = await file.text();
       }                                                                                                                                                         
                                                                                                                                                                 
       if (!text || text.trim().length === 0) {                                                                                                                  
@@ -182,13 +241,13 @@
                                                                                                                                                                 
       return new Uint8Array(await pdfDoc.save());                                                                                                               
     };                                                                                                                                                          
-                                                                                                                                                                
-    const downloadPdf = (pdfBytes: Uint8Array, sourceFileName: string) => {
+
+    const downloadPdf = (pdfBytes: Uint8Array, sourceFileName: string) => {                                                                                     
       const blob = new Blob([pdfBytes], { type: "application/pdf" });                                                                                           
       const url = URL.createObjectURL(blob);                                                                                                                    
                                                                                                                                                                 
       const a = document.createElement("a");                                                                                                                    
-      a.href = url;
+      a.href = url;                                                                                                                                             
       a.download = sourceFileName.replace(/\.[^/.]+$/, "") + ".pdf";                                                                                            
       a.click();                                                                                                                                                
                                                                                                                                                                 
@@ -197,142 +256,172 @@
                                                                                                                                                                 
     const handleConvert = async () => {                                                                                                                         
       if (!files.length) return;                                                                                                                                
-      if (encryptOutput && !encryptionPassword.trim()) {
-        toolToast.warning("Enter a password to encrypt output files.");
-        return;
-      }
-
+      if (scanState !== "clean") {                                                                                                                              
+        setError('Please click "Scan Files" before converting.');                                                                                               
+        toolToast.warning('Please click "Scan Files" before converting.');                                                                                      
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+      if (encryptOutput && !encryptionPassword.trim()) {                                                                                                        
+        toolToast.warning("Enter a password to encrypt output files.");                                                                                         
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+                                                                                                                                                                
       setLoading(true);                                                                                                                                         
       setError("");                                                                                                                                             
-      toolToast.info("Converting document to PDF...");
+      toolToast.info("Converting document to PDF...");                                                                                                          
                                                                                                                                                                 
       try {                                                                                                                                                     
         const conversionResults = await Promise.all(                                                                                                            
           files.map(async (file) => ({                                                                                                                          
             file,                                                                                                                                               
             pdfBytes: await convertFileToPdf(file),                                                                                                             
-          }))                                                                                                                                                   
+          })),                                                                                                                                                  
         );                                                                                                                                                      
                                                                                                                                                                 
-        for (const { file, pdfBytes } of conversionResults) {
-          const outputBytes = encryptOutput
-            ? new Uint8Array(await protectPdfBytes(pdfBytes, encryptionPassword.trim()))
-            : pdfBytes;
-          downloadPdf(outputBytes, file.name);                                                                                                                     
+        for (const { file, pdfBytes } of conversionResults) {                                                                                                   
+          const outputBytes = encryptOutput                                                                                                                     
+            ? new Uint8Array(await protectPdfBytes(pdfBytes, encryptionPassword.trim()))                                                                        
+            : pdfBytes;                                                                                                                                         
+          downloadPdf(outputBytes, file.name);                                                                                                                  
           saveRecentFile(file.name, "Document to PDF");                                                                                                         
         }                                                                                                                                                       
-        toolToast.success(
-          encryptOutput
-            ? conversionResults.length === 1
-              ? "Password-protected file is ready for download."
-              : `${conversionResults.length} password-protected files are ready for download.`
-            : conversionResults.length === 1
-              ? "File is ready for download."
-              : `${conversionResults.length} files are ready for download.`
-        );
+                                                                                                                                                                
+        toolToast.success(                                                                                                                                      
+          encryptOutput                                                                                                                                         
+            ? conversionResults.length === 1                                                                                                                    
+              ? "Password-protected file is ready for download."                                                                                                
+              : `${conversionResults.length} password-protected files are ready for download.`                                                                  
+            : conversionResults.length === 1                                                                                                                    
+              ? "File is ready for download."                                                                                                                   
+              : `${conversionResults.length} files are ready for download.`,                                                                                    
+        );                                                                                                                                                      
       } catch (err) {                                                                                                                                           
         console.error(err);                                                                                                                                     
-        setError("Conversion failed");
-        toolToast.error("Processing failed. Conversion could not be completed.");
-      } finally {
+        setError("Conversion failed");                                                                                                                          
+        toolToast.error("Processing failed. Conversion could not be completed.");                                                                               
+      } finally {                                                                                                                                               
         setLoading(false);                                                                                                                                      
       }                                                                                                                                                         
     };                                                                                                                                                          
                                                                                                                                                                 
-    return (
-      <div className="mx-auto my-10 max-w-2xl px-4">
-        <h1 className="text-3xl font-semibold">Document to PDF</h1>
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".txt,.html,.json,.docx"
-          onChange={handleFileChange}
-          className="hidden"
-        />
-
-        <div
-          onDrop={handleDrop}
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-          onDragLeave={() => setIsDragging(false)}
-          onClick={() => fileInputRef.current?.click()}
-          className={`mt-5 cursor-pointer rounded-xl border-2 p-10 text-center transition ${
-            isDragging
-              ? "border-accent bg-accent/10"
-              : "border-dashed border-border bg-muted/40"
-          }`}
-        >
-          <p className="text-lg">
-            {isDragging ? "Drop files here" : "Drop files here or click to upload"}
-          </p>
-        </div>
-
-        {error && <p className="mt-3 text-danger">{error}</p>}
-
-        {files.length > 0 && (
-          <>
-            <div className="mt-5 grid gap-3">
-              {files.map((file, index) => (
-                <div
-                  key={`${file.name}-${file.size}-${file.lastModified}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"
+    return (                                                                                                                                                    
+      <div className="mx-auto my-10 max-w-2xl px-4">                                                                                                            
+        <h1 className="text-3xl font-semibold">Document to PDF</h1>                                                                                             
+                                                                                                                                                                
+        <input                                                                                                                                                  
+          ref={fileInputRef}                                                                                                                                    
+          type="file"                                                                                                                                           
+          multiple                                                                                                                                              
+          accept=".txt,.html,.json,.docx"                                                                                                                       
+          onChange={handleFileChange}                                                                                                                           
+          className="hidden"                                                                                                                                    
+        />                                                                                                                                                      
+                                                                                                                                                                
+        <div                                                                                                                                                    
+          onDrop={handleDrop}                                                                                                                                   
+          onDragOver={(e) => {                                                                                                                                  
+            e.preventDefault();                                                                                                                                 
+            setIsDragging(true);                                                                                                                                
+          }}                                                                                                                                                    
+          onDragLeave={() => setIsDragging(false)}                                                                                                              
+          onClick={() => fileInputRef.current?.click()}                                                                                                         
+          className={`mt-5 cursor-pointer rounded-xl border-2 p-10 text-center transition ${                                                                    
+            isDragging                                                                                                                                          
+              ? "border-accent bg-accent/10"                                                                                                                    
+              : "border-dashed border-border bg-muted/40"                                                                                                       
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          <p className="text-lg">                                                                                                                               
+            {isDragging ? "Drop files here" : "Drop files here or click to upload"}                                                                             
+          </p>                                                                                                                                                  
+        </div>                                                                                                                                                  
+                                                                                                                                                                
+        {error && <p className="mt-3 text-danger">{error}</p>}                                                                                                  
+        {scanMessage && (                                                                                                                                       
+          <p className={`mt-2 ${scanState === "clean" ? "text-green-600" : "text-muted-foreground"}`}>                                                          
+            {scanMessage}                                                                                                                                       
+          </p>                                                                                                                                                  
+        )}                                                                                                                                                      
+                                                                                                                                                                
+        {files.length > 0 && (                                                                                                                                  
+          <>                                                                                                                                                    
+            <div className="mt-5 grid gap-3">                                                                                                                   
+              {files.map((file, index) => (                                                                                                                     
+                <div                                                                                                                                            
+                  key={`${file.name}-${file.size}-${file.lastModified}`}                                                                                        
+                  className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card p-3"                                               
                 >
-                  <span className="truncate">{file.name}</span>
-
-                  <button
-                    onClick={() => handleRemoveFile(index)}
-                    className="rounded-md bg-danger px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            <button
-              onClick={clearSelection}
-              className="mt-3 rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:bg-muted"
-            >
-              Clear all
-            </button>
-          </>
-        )}
-
-        <div className="mt-4 rounded-lg border border-border p-3">
-          <label className="flex items-center gap-2 text-sm font-medium">
-            <input
-              type="checkbox"
-              checked={encryptOutput}
-              onChange={(e) => setEncryptOutput(e.target.checked)}
-            />
-            Encrypt output PDF before download
-          </label>
-          {encryptOutput && (
-            <input
-              type="password"
-              value={encryptionPassword}
+                  <span className="truncate">{file.name}</span>                                                                                                 
+                  <button                                                                                                                                       
+                    onClick={() => handleRemoveFile(index)}                                                                                                     
+                    className="rounded-md bg-danger px-3 py-1.5 text-sm text-primary-foreground hover:opacity-90"                                               
+                  >                                                                                                                                             
+                    Remove                                                                                                                                      
+                  </button>                                                                                                                                     
+                </div>                                                                                                                                          
+              ))}                                                                                                                                               
+            </div>                                                                                                                                              
+                                                                                                                                                                
+            <button                                                                                                                                             
+              onClick={clearSelection}                                                                                                                          
+              className="mt-3 rounded-md border border-border px-3 py-1.5 text-muted-foreground hover:bg-muted"                                                 
+            >                                                                                                                                                   
+              Clear all                                                                                                                                         
+            </button>                                                                                                                                           
+          </>                                                                                                                                                   
+        )}                                                                                                                                                      
+                                                                                                                                                                
+        <div className="mt-4 rounded-lg border border-border p-3">                                                                                              
+          <label className="flex items-center gap-2 text-sm font-medium">                                                                                       
+            <input                                                                                                                                              
+              type="checkbox"                                                                                                                                   
+              checked={encryptOutput}                                                                                                                           
+              onChange={(e) => setEncryptOutput(e.target.checked)}                                                                                              
+            />                                                                                                                                                  
+            Encrypt output PDF before download                                                                                                                  
+          </label>                                                                                                                                              
+          {encryptOutput && (                                                                                                                                   
+            <input                                                                                                                                              
+              type="password"                                                                                                                                   
+              value={encryptionPassword}                                                                                                                        
               onChange={(e) => setEncryptionPassword(e.target.value)}
-              placeholder="Set encryption password"
-              className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm"
-            />
-          )}
-        </div>
-
-        <button
-          onClick={handleConvert}
-          disabled={loading || files.length === 0}
-          className={`mt-6 rounded-lg px-6 py-3 ${
-            loading || files.length === 0
-              ? "cursor-not-allowed bg-muted text-muted-foreground"
-              : "bg-primary text-primary-foreground hover:opacity-90"
-          }`}
-        >
-          {loading ? "Converting..." : `Convert ${files.length} file(s) to PDF`}
-        </button>
-      </div>
-    );
+              placeholder="Set encryption password"                                                                                                             
+              className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm"                                                                         
+            />                                                                                                                                                  
+          )}                                                                                                                                                    
+        </div>                                                                                                                                                  
+                                                                                                                                                                
+        <button                                                                                                                                                 
+          onClick={runScan}                                                                                                                                     
+          disabled={loading || files.length === 0 || scanState === "scanning"}                                                                                  
+          className={`mt-6 rounded-lg px-6 py-3 ${                                                                                                              
+            loading || files.length === 0 || scanState === "scanning"                                                                                           
+              ? "cursor-not-allowed bg-muted text-muted-foreground"                                                                                             
+              : "border border-foreground bg-background text-foreground hover:opacity-90"                                                                       
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          {scanState === "scanning" ? "Scanning..." : "Scan Files"}                                                                                             
+        </button>                                                                                                                                               
+                                                                                                                                                                
+        <button                                                                                                                                                 
+          onClick={handleConvert}                                                                                                                               
+          disabled={                                                                                                                                            
+            loading ||                                                                                                                                          
+            files.length === 0 ||                                                                                                                               
+            scanState !== "clean" ||
+            (encryptOutput && !encryptionPassword.trim())                                                                                                       
+          }                                                                                                                                                     
+          className={`mt-3 rounded-lg px-6 py-3 ${                                                                                                              
+            loading ||                                                                                                                                          
+            files.length === 0 ||                                                                                                                               
+            scanState !== "clean" ||                                                                                                                            
+            (encryptOutput && !encryptionPassword.trim())                                                                                                       
+              ? "cursor-not-allowed bg-muted text-muted-foreground"                                                                                             
+              : "bg-primary text-primary-foreground hover:opacity-90"                                                                                           
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          {loading ? "Converting..." : `Convert ${files.length} file(s) to PDF`}                                                                                
+        </button>                                                                                                                                               
+      </div>                                                                                                                                                    
+    );                                                                                                                                                          
   }
