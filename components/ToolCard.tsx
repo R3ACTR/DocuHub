@@ -52,11 +52,13 @@ export function ToolCard({
     <Link
       href={href}
       className={cn(
-        "group relative flex flex-col justify-between overflow-hidden rounded-xl border bg-card p-6 shadow-sm transition-all hover:bg-muted/50 hover:shadow-md",
-        active ? "border-primary ring-1 ring-primary" : "border-border"
+        "group relative flex flex-col justify-between overflow-hidden rounded-2xl border bg-card p-6 transition-all duration-300",
+        active
+          ? "border-primary ring-1 ring-primary shadow-premium"
+          : "border-border/60 hover:border-primary/50 hover:shadow-premium-hover hover:-translate-y-1"
       )}
     >
-      <div className="absolute right-4 top-4 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="absolute right-4 top-4 text-primary opacity-0 transition-opacity group-hover:opacity-100">
         <ArrowRight
           className="h-5 w-5 -rotate-45 transition-transform group-hover:rotate-0"
           aria-hidden="true"

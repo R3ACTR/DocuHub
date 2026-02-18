@@ -29,8 +29,9 @@ export async function storeFiles(
 
     const { cleanFiles, threats } = await scanUploadedFiles(files);
     if (!cleanFiles.length) {
-      alert(buildThreatWarning(threats));
-      return false;
+      const msg = buildThreatWarning(threats) || "Security scan failed";
+      alert(msg);
+      return { ok: false, error: msg };
     }
 
     if (threats.length) {

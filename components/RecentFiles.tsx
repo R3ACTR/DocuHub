@@ -61,16 +61,18 @@ export default function RecentFiles({ files, onDelete, onClear }: RecentFilesPro
       </div>
 
       {/* File List */}
-      <div className="space-y-3">
+      <div className="grid gap-4">
         {files.map((file, index) => (
           <div
             key={index}
-            className="p-4 rounded-lg border bg-card shadow-sm flex justify-between items-center"
+            className="p-5 rounded-2xl border border-border/60 bg-card/50 backdrop-blur-sm shadow-sm flex flex-col sm:flex-row justify-between sm:items-center gap-4 hover:shadow-premium transition-all group"
           >
             <div>
-              <p className="font-medium">{file.fileName}</p>
-              <p className="text-sm text-muted-foreground">
-                {file.tool} • {file.time}
+              <p className="font-bold text-foreground group-hover:text-primary transition-colors">{file.fileName}</p>
+              <p className="text-sm text-muted-foreground flex items-center gap-2 mt-1">
+                <span className="px-2 py-0.5 rounded bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">{file.tool}</span>
+                <span>•</span>
+                <span>{file.time}</span>
               </p>
             </div>
 
