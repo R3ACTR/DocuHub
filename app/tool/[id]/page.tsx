@@ -89,11 +89,24 @@
     },                                                                                                                                                          
   ]);
                                                                                                                                                                 
-  const MOVED_TO_DASHBOARD: Record<string, string> = {                                                                                                          
-    "pdf-merge": "/dashboard/pdf-merge",                                                                                                                        
-    "document-to-pdf": "/dashboard/document-to-pdf",                                                                                                            
-    "pdf-split": "/dashboard/pdf-split",                                                                                                                        
-  };                                                                                                                                                            
+  const MOVED_TO_DASHBOARD: Record<string, string> = {
+    "pdf-merge": "/dashboard/pdf-merge",
+    "document-to-pdf": "/dashboard/document-to-pdf",
+    "pdf-split": "/dashboard/pdf-split",
+  };
+
+  const OUTPUT_ENCRYPTION_ENABLED_TOOLS = new Set([
+    "jpeg-to-pdf",
+    "png-to-pdf",
+    "pdf-compress",
+    "pdf-watermark",
+    "pdf-redact",
+    "pdf-delete-pages",
+    "pdf-page-reorder",
+    "pdf-password-remover",
+    "pdf-page-numbers",
+    "pdf-rotate",
+  ]);
                                                                                                                                                                 
   export default function ToolUploadPage() {                                                                                                                    
     const router = useRouter();                                                                                                                                 
@@ -121,17 +134,20 @@
     const [compressionTargetBytesInput, setCompressionTargetBytesInput] =                                                                                       
       useState("");                                                                                                                                             
                                                                                                                                                                 
-    const [protectPassword, setProtectPassword] = useState("");                                                                                                 
-    const [passwordRemoverPassword, setPasswordRemoverPassword] = useState("");                                                                                 
-    const [deletePagesInput, setDeletePagesInput] = useState("");                                                                                               
+    const [protectPassword, setProtectPassword] = useState("");
+    const [passwordRemoverPassword, setPasswordRemoverPassword] = useState("");
+    const [encryptOutput, setEncryptOutput] = useState(false);
+    const [outputEncryptionPassword, setOutputEncryptionPassword] = useState("");
+    const [deletePagesInput, setDeletePagesInput] = useState("");
     const [reorderPagesInput, setReorderPagesInput] = useState("");                                                                                             
     const [extractImageFormat, setExtractImageFormat] = useState<"png" | "jpg">(                                                                                
       "png",                                                                                                                                                    
     );                                                                                                                                                          
                                                                                                                                                                 
     const [rotateConfig, setRotateConfig] = useState({ angle: 90, pages: "" });                                                                                 
-    const [pageNumberFormat, setPageNumberFormat] = useState("numeric");                                                                                        
-    const [pageNumberFontSize, setPageNumberFontSize] = useState(14);                                                                                           
+    const [pageNumberFormat, setPageNumberFormat] = useState("numeric");
+    const [pageNumberFontSize, setPageNumberFontSize] = useState(14);
+    const supportsOutputEncryption = OUTPUT_ENCRYPTION_ENABLED_TOOLS.has(toolId);
                                                                                                                                                                 
     const fileInputRef = useRef<HTMLInputElement | null>(null);                                                                                                 
                                                                                                                                                                 
@@ -364,6 +380,12 @@
         toolToast.warning(message);
         return;
       }
+      if (supportsOutputEncryption && encryptOutput && !outputEncryptionPassword.trim()) {
+        const message = "Enter a password to encrypt output files.";
+        setFileError(message);
+        toolToast.warning(message);
+        return;
+      }
                                                                                                                                                                 
       if (toolId === "pdf-compress") {                                                                                                                          
         localStorage.setItem("compressionLevel", compressionLevel);                                                                                             
@@ -408,13 +430,26 @@
       toolToast.info("Processing started.");
 
       try {
+        const storeOptions: {
+          password?: string;
+          encryptOutput?: boolean;
+          outputPassword?: string;
+        } = {};
+
+        if (toolId === "pdf-protect") {
+          storeOptions.password = protectPassword;
+        } else if (toolId === "pdf-password-remover") {
+          storeOptions.password = passwordRemoverPassword;
+        }
+
+        if (supportsOutputEncryption && encryptOutput) {
+          storeOptions.encryptOutput = true;
+          storeOptions.outputPassword = outputEncryptionPassword.trim();
+        }
+
         const result = await storeFiles(
           selectedFiles,
-          toolId === "pdf-protect"
-            ? { password: protectPassword }
-            : toolId === "pdf-password-remover"
-              ? { password: passwordRemoverPassword }
-              : undefined,
+          Object.keys(storeOptions).length ? storeOptions : undefined,
         );
 
         if (!result.ok) {
@@ -443,14 +478,15 @@
       router.push("/dashboard");                                                                                                                                
     };                                                                                                                                                          
                                                                                                                                                                 
-    const canProcess =                                                                                                                                          
-      selectedFiles.length > 0 &&                                                                                                                               
-      !isProcessing &&                                                                                                                                          
-      !(toolId === "pdf-protect" && !protectPassword.trim()) &&                                                                                                 
-      !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&                                                                                           
-      !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&                                                                                          
-      !(toolId === "pdf-watermark" && !watermarkText.trim()) &&                                                                                                 
-      !(toolId === "pdf-password-remover" && !passwordRemoverPassword.trim());                                                                                  
+    const canProcess =
+      selectedFiles.length > 0 &&
+      !isProcessing &&
+      !(toolId === "pdf-protect" && !protectPassword.trim()) &&
+      !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&
+      !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&
+      !(toolId === "pdf-watermark" && !watermarkText.trim()) &&
+      !(toolId === "pdf-password-remover" && !passwordRemoverPassword.trim()) &&
+      !(supportsOutputEncryption && encryptOutput && !outputEncryptionPassword.trim());
                                                                                                                                                                 
     if (CATEGORY_TOOLS.has(toolId)) {                                                                                                                           
       const categoryConfig =                                                                                                                                    
@@ -604,8 +640,8 @@
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
-          {(toolId === "pdf-protect" || toolId === "pdf-password-remover") && (                                                                                 
-            <div className="mt-6 rounded-xl border border-gray-200 p-4">                                                                                        
+          {(toolId === "pdf-protect" || toolId === "pdf-password-remover") && (
+            <div className="mt-6 rounded-xl border border-gray-200 p-4">
               <label className="block text-sm font-medium mb-2">Password</label>                                                                                
               <input                                                                                                                                            
                 type="password"                                                                                                                                 
@@ -620,8 +656,35 @@
                 placeholder="Enter password"                                                                                                                    
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
-            </div>                                                                                                                                              
-          )}                                                                                                                                                    
+            </div>
+          )}
+
+          {supportsOutputEncryption && (
+            <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-3">
+              <label className="flex items-center gap-2 text-sm font-medium">
+                <input
+                  type="checkbox"
+                  checked={encryptOutput}
+                  onChange={(e) => setEncryptOutput(e.target.checked)}
+                />
+                Encrypt output PDF before download
+              </label>
+              {encryptOutput && (
+                <div>
+                  <input
+                    type="password"
+                    value={outputEncryptionPassword}
+                    onChange={(e) => setOutputEncryptionPassword(e.target.value)}
+                    placeholder="Set encryption password"
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  />
+                  <p className="mt-1 text-xs text-gray-500">
+                    This password will be required to open downloaded PDF files.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
                                                                                                                                                                 
           {toolId === "pdf-watermark" && (                                                                                                                      
             <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              

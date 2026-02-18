@@ -5,6 +5,7 @@
   import type { PDFFont } from "pdf-lib";                                                                                                                       
   import * as mammoth from "mammoth";                                                                                                                           
   import { toolToast } from "@/lib/toolToasts";
+  import { protectPdfBytes } from "@/lib/pdfProtection";
                                                                                                                                                                 
   function sanitizeForWinAnsi(text: string, font: PDFFont) {                                                                                                    
     let result = "";                                                                                                                                            
@@ -41,6 +42,8 @@
     const [loading, setLoading] = useState(false);                                                                                                              
     const [error, setError] = useState("");                                                                                                                     
     const [isDragging, setIsDragging] = useState(false);                                                                                                        
+    const [encryptOutput, setEncryptOutput] = useState(false);
+    const [encryptionPassword, setEncryptionPassword] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);                                                                                                        
                                                                                                                                                                 
     const ALLOWED_TYPES = [".txt", ".html", ".json", ".docx"];                                                                                                  
@@ -180,7 +183,7 @@
       return new Uint8Array(await pdfDoc.save());                                                                                                               
     };                                                                                                                                                          
                                                                                                                                                                 
-    const downloadPdf = (pdfBytes: Uint8Array, sourceFileName: string) => {                                                                                     
+    const downloadPdf = (pdfBytes: Uint8Array, sourceFileName: string) => {
       const blob = new Blob([pdfBytes], { type: "application/pdf" });                                                                                           
       const url = URL.createObjectURL(blob);                                                                                                                    
                                                                                                                                                                 
@@ -194,6 +197,10 @@
                                                                                                                                                                 
     const handleConvert = async () => {                                                                                                                         
       if (!files.length) return;                                                                                                                                
+      if (encryptOutput && !encryptionPassword.trim()) {
+        toolToast.warning("Enter a password to encrypt output files.");
+        return;
+      }
 
       setLoading(true);                                                                                                                                         
       setError("");                                                                                                                                             
@@ -207,14 +214,21 @@
           }))                                                                                                                                                   
         );                                                                                                                                                      
                                                                                                                                                                 
-        for (const { file, pdfBytes } of conversionResults) {                                                                                                   
-          downloadPdf(pdfBytes, file.name);                                                                                                                     
+        for (const { file, pdfBytes } of conversionResults) {
+          const outputBytes = encryptOutput
+            ? new Uint8Array(await protectPdfBytes(pdfBytes, encryptionPassword.trim()))
+            : pdfBytes;
+          downloadPdf(outputBytes, file.name);                                                                                                                     
           saveRecentFile(file.name, "Document to PDF");                                                                                                         
         }                                                                                                                                                       
         toolToast.success(
-          conversionResults.length === 1
-            ? "File is ready for download."
-            : `${conversionResults.length} files are ready for download.`
+          encryptOutput
+            ? conversionResults.length === 1
+              ? "Password-protected file is ready for download."
+              : `${conversionResults.length} password-protected files are ready for download.`
+            : conversionResults.length === 1
+              ? "File is ready for download."
+              : `${conversionResults.length} files are ready for download.`
         );
       } catch (err) {                                                                                                                                           
         console.error(err);                                                                                                                                     
@@ -287,6 +301,26 @@
             </button>
           </>
         )}
+
+        <div className="mt-4 rounded-lg border border-border p-3">
+          <label className="flex items-center gap-2 text-sm font-medium">
+            <input
+              type="checkbox"
+              checked={encryptOutput}
+              onChange={(e) => setEncryptOutput(e.target.checked)}
+            />
+            Encrypt output PDF before download
+          </label>
+          {encryptOutput && (
+            <input
+              type="password"
+              value={encryptionPassword}
+              onChange={(e) => setEncryptionPassword(e.target.value)}
+              placeholder="Set encryption password"
+              className="mt-2 w-full rounded-lg border border-border px-3 py-2 text-sm"
+            />
+          )}
+        </div>
 
         <button
           onClick={handleConvert}

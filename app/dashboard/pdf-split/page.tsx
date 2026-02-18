@@ -3,12 +3,15 @@
 import { useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { toolToast } from "@/lib/toolToasts";
+import { protectPdfBytes } from "@/lib/pdfProtection";
 
 export default function PdfSplitPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [pageRange, setPageRange] = useState("");
+  const [encryptOutput, setEncryptOutput] = useState(false);
+  const [encryptionPassword, setEncryptionPassword] = useState("");
 
   const formatFileSize = (bytes: number) => {
     if (bytes < 1024) return bytes + " B";
@@ -49,6 +52,10 @@ export default function PdfSplitPage() {
     }
     if (!pageRange) {
       toolToast.warning("Please enter a page range.");
+      return;
+    }
+    if (encryptOutput && !encryptionPassword.trim()) {
+      toolToast.warning("Enter a password to encrypt output file.");
       return;
     }
 
@@ -100,8 +107,14 @@ export default function PdfSplitPage() {
       copiedPages.forEach((page) => newPdf.addPage(page));
 
       const newBytes = await newPdf.save();
+      let outputBytes = new Uint8Array(newBytes);
+      if (encryptOutput) {
+        outputBytes = new Uint8Array(
+          await protectPdfBytes(outputBytes, encryptionPassword.trim())
+        );
+      }
 
-      const blob = new Blob([new Uint8Array(newBytes)], {
+      const blob = new Blob([outputBytes], {
         type: "application/pdf",
       });
 
@@ -114,7 +127,11 @@ export default function PdfSplitPage() {
 
       URL.revokeObjectURL(url);
 
-      toolToast.success("File is ready for download.");
+      toolToast.success(
+        encryptOutput
+          ? "Password-protected file is ready for download."
+          : "File is ready for download."
+      );
 
     } catch (err) {
       console.error(err);
@@ -224,6 +241,26 @@ export default function PdfSplitPage() {
         onChange={(e) => setPageRange(e.target.value)}
         className="w-full mt-4 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-ring outline-none"
       />
+
+      <div className="mt-4 rounded-lg border border-border p-3">
+        <label className="flex items-center gap-2 text-sm font-medium">
+          <input
+            type="checkbox"
+            checked={encryptOutput}
+            onChange={(e) => setEncryptOutput(e.target.checked)}
+          />
+          Encrypt split PDF before download
+        </label>
+        {encryptOutput && (
+          <input
+            type="password"
+            value={encryptionPassword}
+            onChange={(e) => setEncryptionPassword(e.target.value)}
+            placeholder="Set encryption password"
+            className="mt-2 w-full border rounded-lg px-3 py-2 text-sm"
+          />
+        )}
+      </div>
 
       {/* Split Button */}
       <button
