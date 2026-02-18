@@ -301,7 +301,7 @@ export default function Dashboard() {
                     href={`/tool/${lastTool}`}
                     className="text-lg font-bold text-foreground hover:text-primary transition-colors flex items-center gap-2"
                   >
-                    {lastTool.replace("-", " ").toUpperCase()}
+                    {lastTool.replaceAll("-", " ").toUpperCase()}
                     <ArrowRight className="w-4 h-4" />
                   </Link>
                 </div>
@@ -362,7 +362,7 @@ export default function Dashboard() {
                       className="glass-card p-5 flex flex-col justify-between group"
                     >
                       <span className="font-bold text-foreground group-hover:text-primary transition-colors">
-                        {tool.replace("-", " ").toUpperCase()}
+                        {tool.replaceAll("-", " ").toUpperCase()}
                       </span>
                       <span className="text-xs text-muted-foreground mt-2">
                         {count} sessions
