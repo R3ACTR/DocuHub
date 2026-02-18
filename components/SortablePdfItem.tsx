@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { PdfThumbnail } from './PdfThumbnail';
 import { Trash2, GripVertical } from 'lucide-react';
+import { formatFileSize } from '@/lib/utils';
 
 interface SortablePdfItemProps {
   id: string;
@@ -30,11 +31,7 @@ export function SortablePdfItem({ id, file, index, onRemove, uploadedTime }: Sor
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes < 1024) return bytes + " B";
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
-    return (bytes / (1024 * 1024)).toFixed(1) + " MB";
-  };
+
 
   return (
     <div
