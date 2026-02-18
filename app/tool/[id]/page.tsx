@@ -1,9 +1,9 @@
-"use client";                                                                                                                                                 
+"use client";
                                                                                                                                                                 
   import {                                                                                                                                                      
     ArrowLeft,                                                                                                                                                  
     Upload,                                                                                                                                                     
-    FileText,
+    FileText,                                                                                                                                                   
     Image as ImageIcon,                                                                                                                                         
     ArrowLeftRight,                                                                                                                                             
     ScanText,                                                                                                                                                   
@@ -15,8 +15,9 @@
   import { useRouter, useParams } from "next/navigation";                                                                                                       
   import { useEffect, useRef, useState } from "react";                                                                                                          
   import { motion } from "framer-motion";                                                                                                                       
-  import { clearStoredFiles, storeFiles } from "@/lib/fileStore";                                                                                               
-  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";
+import { clearStoredFiles, storeFiles } from "@/lib/fileStore";
+  import { buildThreatWarning, scanUploadedFiles } from "@/lib/security/virusScan";                                                                             
+  import { toolToast } from "@/lib/toolToasts";
                                                                                                                                                                 
   import { saveToolState, clearToolState } from "@/lib/toolStateStorage";                                                                                       
                                                                                                                                                                 
@@ -32,7 +33,7 @@
     "pdf-redact",                                                                                                                                               
     "metadata-viewer",                                                                                                                                          
     "pdf-extract-images",                                                                                                                                       
-    "pdf-delete-pages",                                                                                                                                         
+    "pdf-delete-pages",
     "pdf-page-reorder",                                                                                                                                         
     "pdf-password-remover",                                                                                                                                     
     "pdf-page-numbers",                                                                                                                                         
@@ -40,7 +41,8 @@
   ]);                                                                                                                                                           
                                                                                                                                                                 
   const CATEGORY_TOOLS = new Set(["pdf-tools", "file-conversion", "data-tools"]);                                                                               
-  const FILE_CONVERSION_TOOLS = Object.freeze([                                                                                                                 
+                                                                                                                                                                
+  const FILE_CONVERSION_TOOLS = Object.freeze([
     {                                                                                                                                                           
       id: "document-to-pdf",                                                                                                                                    
       title: "Document to PDF",                                                                                                                                 
@@ -63,6 +65,7 @@
       icon: ImageIcon,                                                                                                                                          
     },                                                                                                                                                          
   ]);                                                                                                                                                           
+                                                                                                                                                                
   const DATA_TOOLS = Object.freeze([                                                                                                                            
     {                                                                                                                                                           
       id: "ocr",                                                                                                                                                
@@ -85,7 +88,7 @@
       href: "/tool/pdf-redact",                                                                                                                                 
       icon: Shield,                                                                                                                                             
     },                                                                                                                                                          
-  ]);                                                                                                                                                           
+  ]);
                                                                                                                                                                 
   const MOVED_TO_DASHBOARD: Record<string, string> = {                                                                                                          
     "pdf-merge": "/dashboard/pdf-merge",                                                                                                                        
@@ -102,6 +105,10 @@
       : (params.id as string);                                                                                                                                  
                                                                                                                                                                 
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);                                                                                             
+    const [previewIndex, setPreviewIndex] = useState(0);                                                                                                        
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);                                                                                          
+    const [previewText, setPreviewText] = useState("");                                                                                                         
+    const [isPreviewLoading, setIsPreviewLoading] = useState(false);                                                                                            
     const [fileError, setFileError] = useState<string | null>(null);                                                                                            
     const [scanState, setScanState] = useState<"idle" | "scanning" | "clean" | "threat">("idle");
     const [scanMessage, setScanMessage] = useState<string | null>(null);
@@ -114,7 +121,6 @@
     const [compressionLevel, setCompressionLevel] = useState<                                                                                                   
       "low" | "medium" | "high"                                                                                                                                 
     >("medium");                                                                                                                                                
-                                                                                                                                                                
     const [compressionTargetBytesInput, setCompressionTargetBytesInput] =                                                                                       
       useState("");                                                                                                                                             
                                                                                                                                                                 
@@ -135,11 +141,50 @@
     useEffect(() => {                                                                                                                                           
       if (!toolId || !selectedFiles.length) return;                                                                                                             
                                                                                                                                                                 
-      const file = selectedFiles[0];                                                                                                                            
+      const file = selectedFiles[0];
       saveToolState(toolId, {                                                                                                                                   
         fileMeta: { name: file.name, size: file.size, type: file.type },                                                                                        
-      });                                                                                                                                                       
+      });
     }, [toolId, selectedFiles]);                                                                                                                                
+                                                                                                                                                                
+    useEffect(() => {                                                                                                                                           
+      const file = selectedFiles[previewIndex];                                                                                                                 
+      if (!file) {                                                                                                                                              
+        setPreviewUrl(null);                                                                                                                                    
+        setPreviewText("");                                                                                                                                     
+        setIsPreviewLoading(false);                                                                                                                             
+        return;                                                                                                                                                 
+      }                                                                                                                                                         
+                                                                                                                                                                
+      let disposed = false;                                                                                                                                     
+      let objectUrl: string | null = null;                                                                                                                      
+      const category = getFileCategory(file);                                                                                                                   
+                                                                                                                                                                
+      setIsPreviewLoading(true);                                                                                                                                
+      setPreviewText("");                                                                                                                                       
+      setPreviewUrl(null);                                                                                                                                      
+                                                                                                                                                                
+      const loadPreview = async () => {
+        try {                                                                                                                                                   
+          if (category === "pdf" || category === "image") {                                                                                                     
+            objectUrl = URL.createObjectURL(file);                                                                                                              
+            if (!disposed) setPreviewUrl(objectUrl);                                                                                                            
+          } else if (category === "text") {                                                                                                                     
+            const text = await file.text();                                                                                                                     
+            if (!disposed) setPreviewText(text.slice(0, 8000));                                                                                                 
+          }                                                                                                                                                     
+        } finally {                                                                                                                                             
+          if (!disposed) setIsPreviewLoading(false);                                                                                                            
+        }                                                                                                                                                       
+      };
+                                                                                                                                                                
+      loadPreview();                                                                                                                                            
+                                                                                                                                                                
+      return () => {                                                                                                                                            
+        disposed = true;                                                                                                                                        
+        if (objectUrl) URL.revokeObjectURL(objectUrl);                                                                                                          
+      };                                                                                                                                                        
+    }, [selectedFiles, previewIndex]);                                                                                                                          
                                                                                                                                                                 
     useEffect(() => {                                                                                                                                           
       const handler = (e: BeforeUnloadEvent) => {                                                                                                               
@@ -150,8 +195,8 @@
       window.addEventListener("beforeunload", handler);                                                                                                         
       return () => window.removeEventListener("beforeunload", handler);                                                                                         
     }, [hasUnsavedWork]);                                                                                                                                       
-
-    useEffect(() => {
+                                                                                                                                                                
+    useEffect(() => {                                                                                                                                           
       if (!toolId) return;                                                                                                                                      
                                                                                                                                                                 
       if (toolId === "pdf-compress") {                                                                                                                          
@@ -162,7 +207,7 @@
           savedLevel === "high"                                                                                                                                 
         ) {                                                                                                                                                     
           setCompressionLevel(savedLevel);                                                                                                                      
-        }                                                                                                                                                       
+        }
                                                                                                                                                                 
         const savedTarget =                                                                                                                                     
           localStorage.getItem("compressionTargetBytes") ||                                                                                                     
@@ -184,7 +229,7 @@
         return;                                                                                                                                                 
       }                                                                                                                                                         
 
-      if (toolId === "pdf-page-reorder") {                                                                                                                      
+      if (toolId === "pdf-page-reorder") {
         setReorderPagesInput(localStorage.getItem("pdfReorderPages") || "");                                                                                    
         return;                                                                                                                                                 
       }                                                                                                                                                         
@@ -207,7 +252,7 @@
                                                                                                                                                                 
         const savedFontSize = Number.parseInt(                                                                                                                  
           localStorage.getItem("pageNumberFontSize") || "14",                                                                                                   
-          10,                                                                                                                                                   
+          10,
         );                                                                                                                                                      
         if (Number.isFinite(savedFontSize) && savedFontSize > 0) {                                                                                              
           setPageNumberFontSize(savedFontSize);                                                                                                                 
@@ -234,7 +279,7 @@
       }                                                                                                                                                         
     }, [toolId]);                                                                                                                                               
                                                                                                                                                                 
-    const getSupportedTypes = () => {
+    const getSupportedTypes = () => {                                                                                                                           
       switch (toolId) {                                                                                                                                         
         case "ocr":                                                                                                                                             
           return [".jpg", ".jpeg", ".png"];                                                                                                                     
@@ -246,53 +291,57 @@
           return [".pdf"];                                                                                                                                      
       }                                                                                                                                                         
     };                                                                                                                                                          
-
-    const runSecurityScan = async (filesToScan: File[]) => {
-      if (!filesToScan.length) {
-        setScanState("idle");
-        setScanMessage(null);
-        return false;
-      }
-
-      setScanState("scanning");
-      setScanMessage("Scanning files...");
-
-      const { cleanFiles, threats } = await scanUploadedFiles(filesToScan);
-      if (!cleanFiles.length) {
-        const warning = buildThreatWarning(threats) || "Security scan failed.";
-        setSelectedFiles([]);
-        setFileError(warning);
-        setScanState("threat");
-        setScanMessage(warning);
-        return false;
-      }
-
-      setSelectedFiles(cleanFiles);
-      if (threats.length) {
-        setFileError(buildThreatWarning(threats));
-        setScanState("clean");
-        setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);
-      } else {
-        setFileError(null);
-        setScanState("clean");
-        setScanMessage("Scan complete. No threats detected.");
-      }
-      return true;
-    };
+const runSecurityScan = async (filesToScan: File[]) => {
+    if (!filesToScan.length) {                                                                                                                                  
+      setScanState("idle");                                                                                                                                     
+      setScanMessage(null);                                                                                                                                     
+      return false;                                                                                                                                             
+    }                                                                                                                                                           
                                                                                                                                                                 
-    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-      clearStoredFiles();                                                                                                                                       
+    setScanState("scanning");                                                                                                                                   
+    setScanMessage("Scanning files...");                                                                                                                        
+                                                                                                                                                                
+    const { cleanFiles, threats } = await scanUploadedFiles(filesToScan);                                                                                       
+    if (!cleanFiles.length) {                                                                                                                                   
+      const warning = buildThreatWarning(threats) || "Security scan failed.";                                                                                   
+      setSelectedFiles([]);                                                                                                                                     
+      setFileError(warning);                                                                                                                                    
+      setScanState("threat");                                                                                                                                   
+      setScanMessage(warning);                                                                                                                                  
+      return false;                                                                                                                                             
+    }                                                                                                                                                           
+                                                                                                                                                                
+    setSelectedFiles(cleanFiles);                                                                                                                               
+    if (threats.length) {                                                                                                                                       
+      setFileError(buildThreatWarning(threats));                                                                                                                
+      setScanState("clean");                                                                                                                                    
+      setScanMessage(`Scan complete. ${threats.length} unsafe file(s) were blocked.`);                                                                          
+    } else {                                                                                                                                                    
+      setFileError(null);                                                                                                                                       
+      setScanState("clean");                                                                                                                                    
+      setScanMessage("Scan complete. No threats detected.");                                                                                                    
+    }                                                                                                                                                           
+                                                                                                                                                                
+    return true;                                                                                                                                                
+  };                                                                                                                                                            
+                                                                                                                                                                
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {                                                                                              
+    clearStoredFiles();                                                                                                                                         
+    // ...existing handleFile logic                                                                                                                             
+  };
                                                                                                                                                                 
       const files = Array.from(e.target.files || []);                                                                                                           
       if (!files.length) return;                                                                                                                                
                                                                                                                                                                 
-      const MAX_FILES = 10;                                                                                                                                     
-      if (files.length > MAX_FILES) {                                                                                                                           
-        setFileError(`You can upload a maximum of ${MAX_FILES} files.`);                                                                                        
-        setScanState("idle");
-        setScanMessage(null);
-        return;                                                                                                                                                 
-      }                                                                                                                                                         
+const MAX_FILES = 10;
+  if (files.length > MAX_FILES) {                                                                                                                               
+    const message = `You can upload a maximum of ${MAX_FILES} files.`;                                                                                          
+    setFileError(message);                                                                                                                                      
+    setScanState("idle");                                                                                                                                       
+    setScanMessage(null);                                                                                                                                       
+    toolToast.warning(message);                                                                                                                                 
+    return;                                                                                                                                                     
+  } 
                                                                                                                                                                 
       const allowed = getSupportedTypes();                                                                                                                      
       const validFiles: File[] = [];                                                                                                                            
@@ -300,55 +349,83 @@
       for (const file of files) {                                                                                                                               
         const ext = "." + file.name.split(".").pop()?.toLowerCase();                                                                                            
                                                                                                                                                                 
-        if (allowed.length && !allowed.includes(ext)) {                                                                                                         
-          setFileError(`Unsupported file type: ${file.name}`);                                                                                                  
-          setScanState("idle");
-          setScanMessage(null);
-          return;                                                                                                                                               
-        }                                                                                                                                                       
+if (allowed.length && !allowed.includes(ext)) {
+    const message = `Unsupported format: ${file.name}. Supported: ${allowed.join(", ")}.`;                                                                      
+    setFileError(message);                                                                                                                                      
+    setScanState("idle");                                                                                                                                       
+    setScanMessage(null);                                                                                                                                       
+    toolToast.warning(message);                                                                                                                                 
+    return;                                                                                                                                                     
+  }                                                                                                                                                             
                                                                                                                                                                 
-        if (file.size > MAX_FILE_SIZE) {                                                                                                                        
-          setFileError(`File too large: ${file.name}`);                                                                                                         
-          setScanState("idle");
-          setScanMessage(null);
-          return;                                                                                                                                               
-        }                                                                                                                                                       
+  if (file.size > MAX_FILE_SIZE) {                                                                                                                              
+    const message = `File is too large: ${file.name}. Max size is 10 MB.`;                                                                                      
+    setFileError(message);                                                                                                                                      
+    setScanState("idle");                                                                                                                                       
+    setScanMessage(null);                                                                                                                                       
+    toolToast.warning(message);                                                                                                                                 
+    return;                                                                                                                                                     
+  }                                                                                                                                                             
                                                                                                                                                                 
-        validFiles.push(file);                                                                                                                                  
-      }                                                                                                                                                         
-
-      setFileError(null);
-      setSelectedFiles(validFiles);
-      setScanState("idle");
-      setScanMessage('Click "Scan Files" before processing.');
-      setHasUnsavedWork(true);                                                                                                                                  
-    };                                                                                                                                                          
+  validFiles.push(file);                                                                                                                                        
+  }                                                                                                                                                             
                                                                                                                                                                 
-    const handleProcessFile = async () => {                                                                                                                     
-      if (!selectedFiles.length) return;                                                                                                                        
-      if (scanState !== "clean") {
-        return setFileError('Please click "Scan Files" and wait for a clean result.');
-      }
-      if (toolId === "pdf-protect" && !protectPassword.trim())                                                                                                  
-        return setFileError("Enter password.");                                                                                                                 
-      if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                                 
-        return setFileError("Enter password.");                                                                                                                 
-      if (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) {                                                                                          
-        return setFileError("Enter pages to delete.");                                                                                                          
-      }                                                                                                                                                         
-      if (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) {                                                                                         
-        return setFileError("Enter page order.");                                                                                                               
-      }                                                                                                                                                         
-      if (toolId === "pdf-watermark" && !watermarkText.trim()) {                                                                                                
-        return setFileError("Enter watermark text.");                                                                                                           
-      }                                                                                                                                                         
+  setFileError(null);                                                                                                                                           
+  setSelectedFiles(validFiles);                                                                                                                                 
+  setScanState("idle");                                                                                                                                         
+  setScanMessage('Click "Scan Files" before processing.');                                                                                                      
+  setHasUnsavedWork(true);                                                                                                                                      
+  toolToast.info(`${validFiles.length} file(s) ready to process.`);                                                                                             
+  };                                                                                                                                                            
+                                                                                                                                                                
+  const handleProcessFile = async () => {                                                                                                                       
+    if (!selectedFiles.length) return;                                                                                                                          
+                                                                                                                                                                
+    if (scanState !== "clean") {                                                                                                                                
+      const message = 'Please click "Scan Files" and wait for a clean result.';                                                                                 
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }
+                                                                                                                                                                
+    if (toolId === "pdf-protect" && !protectPassword.trim()) {                                                                                                  
+      const message = "Enter a password to continue.";                                                                                                          
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }                                                                                                                                                           
+                                                                                                                                                                
+    if (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim()) {                                                                                 
+      const message = "Enter a password to continue.";                                                                                                          
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }                                                                                                                                                           
+                                                                                                                                                                
+    if (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) {                                                                                            
+      const message = "Enter pages to delete.";                                                                                                                 
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }                                                                                                                                                           
+                                                                                                                                                                
+    if (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) {                                                                                           
+      const message = "Enter page order.";                                                                                                                      
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }                                                                                                                                                           
+                                                                                                                                                                
+    if (toolId === "pdf-watermark" && !watermarkText.trim()) {
+      const message = "Enter watermark text.";                                                                                                                  
+      setFileError(message);                                                                                                                                    
+      toolToast.warning(message);                                                                                                                               
+      return;                                                                                                                                                   
+    }                                                                                                                                                           
                                                                                                                                                                 
       if (toolId === "pdf-compress") {                                                                                                                          
         localStorage.setItem("compressionLevel", compressionLevel);                                                                                             
-        const parsedTarget = Number.parseInt(                                                                                                                   
-          compressionTargetBytesInput.trim(),                                                                                                                   
-          10,                                                                                                                                                   
-        );                                                                                                                                                      
+        const parsedTarget = Number.parseInt(compressionTargetBytesInput.trim(), 10);                                                                           
         if (Number.isFinite(parsedTarget) && parsedTarget > 0) {                                                                                                
           localStorage.setItem("compressionTargetBytes", String(parsedTarget));                                                                                 
           localStorage.setItem("targetBytes", String(parsedTarget));                                                                                            
@@ -356,7 +433,7 @@
           localStorage.removeItem("compressionTargetBytes");                                                                                                    
           localStorage.removeItem("targetBytes");                                                                                                               
         }                                                                                                                                                       
-      }                                                                                                                                                         
+      }
                                                                                                                                                                 
       if (toolId === "pdf-watermark") {                                                                                                                         
         localStorage.setItem("watermarkText", watermarkText.trim());                                                                                            
@@ -385,27 +462,35 @@
         localStorage.setItem("pdfRotateConfig", JSON.stringify(rotateConfig));                                                                                  
       }                                                                                                                                                         
                                                                                                                                                                 
-      setIsProcessing(true);                                                                                                                                    
-                                                                                                                                                                
-      try {                                                                                                                                                     
-        const ok = await storeFiles(                                                                                                                            
-          selectedFiles,                                                                                                                                        
-          toolId === "pdf-protect"                                                                                                                              
-            ? { password: protectPassword }                                                                                                                     
-            : toolId === "pdf-password-remover"                                                                                                                 
-              ? { password: passwordRemoverPassword }                                                                                                           
-              : undefined,                                                                                                                                      
-        );                                                                                                                                                      
-                                                                                                                                                                
-        if (!ok) return setFileError("Failed to process file.");                                                                                                
-                                                                                                                                                                
-        clearToolState(toolId);                                                                                                                                 
-        router.push(`/tool/${toolId}/processing`);                                                                                                              
-      } catch {                                                                                                                                                 
-        setFileError("Unexpected error occurred.");                                                                                                             
-      } finally {                                                                                                                                               
-        setIsProcessing(false);                                                                                                                                 
-      }                                                                                                                                                         
+      setIsProcessing(true);
+      toolToast.info("Processing started.");
+
+      try {
+        const result = await storeFiles(
+          selectedFiles,
+          toolId === "pdf-protect"
+            ? { password: protectPassword }
+            : toolId === "pdf-password-remover"
+              ? { password: passwordRemoverPassword }
+              : undefined,
+        );
+
+        if (!result.ok) {
+          const message = result.error || "Failed to process file.";
+          setFileError(message);
+          toolToast.error(message);
+          return;
+        }
+
+        clearToolState(toolId);
+        router.push(`/tool/${toolId}/processing`);
+      } catch {
+        const message = "Unexpected error occurred.";
+        setFileError(message);
+        toolToast.error(message);
+      } finally {
+        setIsProcessing(false);
+      }
     };                                                                                                                                                          
                                                                                                                                                                 
     const handleBackNavigation = () => {                                                                                                                        
@@ -415,7 +500,16 @@
       }                                                                                                                                                         
       router.push("/dashboard");                                                                                                                                
     };                                                                                                                                                          
-
+                                                                                                                                                                
+    const canProcess =                                                                                                                                          
+      selectedFiles.length > 0 &&                                                                                                                               
+      !isProcessing &&                                                                                                                                          
+      !(toolId === "pdf-protect" && !protectPassword.trim()) &&                                                                                                 
+      !(toolId === "pdf-delete-pages" && !deletePagesInput.trim()) &&                                                                                           
+      !(toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) &&                                                                                          
+      !(toolId === "pdf-watermark" && !watermarkText.trim()) &&                                                                                                 
+      !(toolId === "pdf-password-remover" && !passwordRemoverPassword.trim());                                                                                  
+                                                                                                                                                                
     if (CATEGORY_TOOLS.has(toolId)) {                                                                                                                           
       const categoryConfig =                                                                                                                                    
         toolId === "pdf-tools"                                                                                                                                  
@@ -446,9 +540,7 @@
               <categoryConfig.icon className="w-7 h-7 text-primary" />                                                                                          
               <h1 className="text-3xl font-semibold">{categoryConfig.title}</h1>                                                                                
             </div>                                                                                                                                              
-            <p className="text-muted-foreground mb-12">                                                                                                         
-              {categoryConfig.subtitle}                                                                                                                         
-            </p>                                                                                                                                                
+            <p className="text-muted-foreground mb-12">{categoryConfig.subtitle}</p>                                                                            
                                                                                                                                                                 
             <div className="grid gap-6 md:grid-cols-2 max-w-5xl">                                                                                               
               {categoryConfig.tools.map((tool) => (                                                                                                             
@@ -456,7 +548,7 @@
               ))}                                                                                                                                               
             </div>                                                                                                                                              
           </main>                                                                                                                                               
-        </div>
+        </div>                                                                                                                                                  
       );                                                                                                                                                        
     }                                                                                                                                                           
                                                                                                                                                                 
@@ -469,7 +561,7 @@
         ? "Use the dashboard route for this tool."                                                                                                              
         : "Choose an available tool to continue.";                                                                                                              
                                                                                                                                                                 
-      return (
+      return (                                                                                                                                                  
         <div className="min-h-screen flex items-center justify-center px-6">                                                                                    
           <div className="max-w-md w-full text-center border rounded-xl p-6">                                                                                   
             <h1 className="text-2xl font-semibold">{heading}</h1>                                                                                               
@@ -503,7 +595,7 @@
           <button                                                                                                                                               
             onClick={handleBackNavigation}                                                                                                                      
             className="inline-flex items-center gap-2 text-sm mb-6"                                                                                             
-          >                                                                                                                                                     
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Dashboard                                                                                                 
           </button>                                                                                                                                             
                                                                                                                                                                 
@@ -541,14 +633,14 @@
                 <select                                                                                                                                         
                   value={compressionLevel}                                                                                                                      
                   onChange={(e) =>                                                                                                                              
-                    setCompressionLevel(e.target.value as "low" | "medium" | "high")
+                    setCompressionLevel(e.target.value as "low" | "medium" | "high")                                                                            
                   }                                                                                                                                             
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
                   <option value="low">Low (higher quality)</option>                                                                                             
                   <option value="medium">Medium</option>                                                                                                        
                   <option value="high">High (smaller size)</option>                                                                                             
-                </select>
+                </select>                                                                                                                                       
               </div>                                                                                                                                            
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">                                                                                              
@@ -592,11 +684,11 @@
           {toolId === "pdf-watermark" && (                                                                                                                      
             <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
+                <label className="block text-sm font-medium mb-2">
                   Watermark Text                                                                                                                                
                 </label>                                                                                                                                        
                 <input                                                                                                                                          
-                  type="text"
+                  type="text"                                                                                                                                   
                   value={watermarkText}                                                                                                                         
                   onChange={(e) => setWatermarkText(e.target.value)}                                                                                            
                   placeholder="Confidential"                                                                                                                    
@@ -613,7 +705,7 @@
                   max={180}                                                                                                                                     
                   step={1}                                                                                                                                      
                   value={rotationAngle}                                                                                                                         
-                  onChange={(e) => setRotationAngle(Number(e.target.value))}                                                                                    
+                  onChange={(e) => setRotationAngle(Number(e.target.value))}
                   className="w-full"                                                                                                                            
                 />                                                                                                                                              
               </div>                                                                                                                                            
@@ -626,7 +718,7 @@
                   min={5}                                                                                                                                       
                   max={100}                                                                                                                                     
                   step={1}                                                                                                                                      
-                  value={opacity}                                                                                                                               
+                  value={opacity}
                   onChange={(e) => setOpacity(Number(e.target.value))}                                                                                          
                   className="w-full"                                                                                                                            
                 />                                                                                                                                              
@@ -643,7 +735,7 @@
                 onChange={(e) => setDeletePagesInput(e.target.value)}                                                                                           
                 placeholder="e.g. 2,4-6"                                                                                                                        
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
-              />                                                                                                                                                
+              />
               <p className="mt-1 text-xs text-gray-500">                                                                                                        
                 Use comma-separated pages or ranges.                                                                                                            
               </p>                                                                                                                                              
@@ -660,9 +752,7 @@
                 placeholder="e.g. 3,1,2"                                                                                                                        
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
               />                                                                                                                                                
-              <p className="mt-1 text-xs text-gray-500">                                                                                                        
-                Provide each page exactly once.                                                                                                                 
-              </p>                                                                                                                                              
+              <p className="mt-1 text-xs text-gray-500">Provide each page exactly once.</p>                                                                     
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
@@ -675,19 +765,17 @@
                   setExtractImageFormat(e.target.value === "jpg" ? "jpg" : "png")                                                                               
                 }                                                                                                                                               
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                          
-              >
+              >                                                                                                                                                 
                 <option value="png">PNG</option>                                                                                                                
                 <option value="jpg">JPG</option>                                                                                                                
               </select>                                                                                                                                         
             </div>                                                                                                                                              
-          )}
+          )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-page-numbers" && (                                                                                                                   
             <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
-                  Number Format                                                                                                                                 
-                </label>                                                                                                                                        
+                <label className="block text-sm font-medium mb-2">Number Format</label>                                                                         
                 <select                                                                                                                                         
                   value={pageNumberFormat}                                                                                                                      
                   onChange={(e) => setPageNumberFormat(e.target.value)}                                                                                         
@@ -697,7 +785,7 @@
                   <option value="Roman">I, II, III</option>                                                                                                     
                   <option value="letter">A, B, C</option>                                                                                                       
                 </select>                                                                                                                                       
-              </div>                                                                                                                                            
+              </div>
               <div>                                                                                                                                             
                 <label className="block text-sm font-medium mb-2">Font Size</label>                                                                             
                 <input                                                                                                                                          
@@ -713,23 +801,21 @@
                   }}                                                                                                                                            
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 />                                                                                                                                              
-              </div>                                                                                                                                            
+              </div>
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
           {toolId === "pdf-rotate" && (                                                                                                                         
             <div className="mt-6 rounded-xl border border-gray-200 p-4 space-y-4">                                                                              
               <div>                                                                                                                                             
-                <label className="block text-sm font-medium mb-2">                                                                                              
-                  Rotation Angle                                                                                                                                
-                </label>                                                                                                                                        
+                <label className="block text-sm font-medium mb-2">Rotation Angle</label>                                                                        
                 <select                                                                                                                                         
                   value={String(rotateConfig.angle)}                                                                                                            
-                  onChange={(e) =>
+                  onChange={(e) =>                                                                                                                              
                     setRotateConfig((prev) => ({                                                                                                                
                       ...prev,                                                                                                                                  
                       angle: Number(e.target.value),                                                                                                            
-                    }))                                                                                                                                         
+                    }))
                   }                                                                                                                                             
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"                                                                        
                 >                                                                                                                                               
@@ -755,60 +841,144 @@
             </div>                                                                                                                                              
           )}                                                                                                                                                    
                                                                                                                                                                 
-          {fileError && <p className="mt-3 text-sm text-red-600">{fileError}</p>}                                                                               
-          {scanMessage && (
-            <p
-              className={`mt-2 text-sm ${
-                scanState === "clean"
-                  ? "text-green-700"
-                  : scanState === "threat"
-                    ? "text-red-600"
-                    : "text-gray-600"
-              }`}
-            >
-              {scanMessage}
-            </p>
-          )}
-
-          <button
-            onClick={async () => {
-              setFileError(null);
-              await runSecurityScan(selectedFiles);
-            }}
-            disabled={
-              !selectedFiles.length || isProcessing || scanState === "scanning"
-            }
-            className={`mt-6 w-full py-3 rounded-lg text-sm font-medium transition ${
-              selectedFiles.length && !isProcessing && scanState !== "scanning"
-                ? "border border-black text-black hover:bg-gray-100"
-                : "border border-gray-300 text-gray-500 cursor-not-allowed"
-            }`}
-          >
-            {scanState === "scanning" ? "Scanning..." : "Scan Files"}
-          </button>
-
-          <button                                                                                                                                               
-            onClick={handleProcessFile}                                                                                                                         
-            disabled={                                                                                                                                          
-              !selectedFiles.length ||                                                                                                                          
-              scanState !== "clean" ||
-              isProcessing ||                                                                                                                                   
-              (toolId === "pdf-protect" && !protectPassword.trim()) ||                                                                                          
-              (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||                                                                                    
-              (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) ||                                                                                   
-              (toolId === "pdf-watermark" && !watermarkText.trim()) ||                                                                                          
-              (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                            
-            }                                                                                                                                                   
-            className={`mt-8 w-full py-3 rounded-lg text-sm font-medium transition ${                                                                           
-              selectedFiles.length && !isProcessing && scanState === "clean"
-                ? "bg-black text-white hover:bg-gray-800"                                                                                                       
-                : "bg-gray-300 text-gray-500 cursor-not-allowed"                                                                                                
+{selectedFiles.length > 0 && (
+    <div className="mt-8 rounded-xl border border-gray-200 p-4 space-y-4">                                                                                      
+      <div className="flex items-center justify-between">                                                                                                       
+        <h2 className="text-lg font-semibold">File Preview</h2>                                                                                                 
+        <button                                                                                                                                                 
+          type="button"                                                                                                                                         
+          onClick={handleCancelSelection}                                                                                                                       
+          className="text-sm text-gray-600 hover:text-black"                                                                                                    
+        >                                                                                                                                                       
+          Cancel                                                                                                                                                
+        </button>                                                                                                                                               
+      </div>                                                                                                                                                    
+                                                                                                                                                                
+      <div className="space-y-2">                                                                                                                               
+        {selectedFiles.map((file, index) => (                                                                                                                   
+          <div                                                                                                                                                  
+            key={`${file.name}-${file.size}-${file.lastModified}`}                                                                                              
+            className={`flex items-center justify-between rounded-lg border px-3 py-2 ${                                                                        
+              index === previewIndex ? "border-black bg-gray-50" : "border-gray-200"                                                                            
             }`}                                                                                                                                                 
           >                                                                                                                                                     
-            {isProcessing ? "Processing..." : "Process File"}                                                                                                   
-          </button>                                                                                                                                             
-        </main>                                                                                                                                                 
+            <button                                                                                                                                             
+              type="button"                                                                                                                                     
+              onClick={() => setPreviewIndex(index)}                                                                                                            
+              className="text-left min-w-0 flex-1"                                                                                                              
+            >                                                                                                                                                   
+              <p className="truncate text-sm font-medium">{file.name}</p>                                                                                       
+              <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>                                                                              
+            </button>                                                                                                                                           
+            <button                                                                                                                                             
+              type="button"                                                                                                                                     
+              onClick={() => handleRemoveFile(index)}
+              className="ml-3 text-xs text-red-600 hover:text-red-700"                                                                                          
+            >                                                                                                                                                   
+              Remove                                                                                                                                            
+            </button>                                                                                                                                           
+          </div>                                                                                                                                                
+        ))}                                                                                                                                                     
       </div>                                                                                                                                                    
-    );                                                                                                                                                          
-  }                                                                                                                                                             
- 
+                                                                                                                                                                
+      <div className="rounded-lg border border-gray-200 bg-white overflow-hidden">                                                                              
+        {isPreviewLoading ? (                                                                                                                                   
+          <div className="p-6 text-sm text-gray-600">Loading preview...</div>                                                                                   
+        ) : selectedFiles[previewIndex] &&                                                                                                                      
+          getFileCategory(selectedFiles[previewIndex]) === "pdf" &&                                                                                             
+          previewUrl ? (                                                                                                                                        
+          <iframe src={previewUrl} title="PDF preview" className="w-full h-[420px]" />                                                                          
+        ) : selectedFiles[previewIndex] &&                                                                                                                      
+          getFileCategory(selectedFiles[previewIndex]) === "image" &&                                                                                           
+          previewUrl ? (                                                                                                                                        
+          <div className="p-4 flex justify-center bg-gray-50">                                                                                                  
+            <img                                                                                                                                                
+              src={previewUrl}                                                                                                                                  
+              alt="Selected file preview"
+              className="max-h-[420px] w-auto object-contain"                                                                                                   
+            />                                                                                                                                                  
+          </div>                                                                                                                                                
+        ) : selectedFiles[previewIndex] &&                                                                                                                      
+          getFileCategory(selectedFiles[previewIndex]) === "text" ? (                                                                                           
+          <pre className="p-4 text-xs whitespace-pre-wrap break-words max-h-[420px] overflow-auto">                                                             
+            {previewText || "No text content available."}                                                                                                       
+          </pre>                                                                                                                                                
+        ) : (                                                                                                                                                   
+          <div className="p-6 text-sm text-gray-600">                                                                                                           
+            Preview is not available for this file type.                                                                                                        
+          </div>                                                                                                                                                
+        )}                                                                                                                                                      
+      </div>                                                                                                                                                    
+                                                                                                                                                                
+      <p className="text-xs text-gray-500">                                                                                                                     
+        Verify your files before processing. You can replace, remove, or cancel.                                                                                
+      </p>                                                                                                                                                      
+                                                                                                                                                                
+      {fileError && <p className="text-sm text-red-600">{fileError}</p>}                                                                                        
+      {scanMessage && (                                                                                                                                         
+        <p                                                                                                                                                      
+          className={`text-sm ${                                                                                                                                
+            scanState === "clean"                                                                                                                               
+              ? "text-green-700"                                                                                                                                
+              : scanState === "threat"                                                                                                                          
+                ? "text-red-600"                                                                                                                                
+                : "text-gray-600"                                                                                                                               
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          {scanMessage}                                                                                                                                         
+        </p>                                                                                                                                                    
+      )}                                                                                                                                                        
+                                                                                                                                                                
+      <div className="flex flex-col gap-3 sm:flex-row">                                                                                                         
+        <button                                                                                                                                                 
+          type="button"                                                                                                                                         
+          onClick={() => fileInputRef.current?.click()}                                                                                                         
+          className="w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium border border-gray-300 hover:bg-gray-50"                                         
+        >
+          Replace File                                                                                                                                          
+        </button>                                                                                                                                               
+                                                                                                                                                                
+        <button                                                                                                                                                 
+          type="button"                                                                                                                                         
+          onClick={async () => {                                                                                                                                
+            setFileError(null);                                                                                                                                 
+            await runSecurityScan(selectedFiles);                                                                                                               
+          }}                                                                                                                                                    
+          disabled={!selectedFiles.length || isProcessing || scanState === "scanning"}                                                                          
+          className={`w-full sm:w-auto py-3 px-4 rounded-lg text-sm font-medium transition ${                                                                   
+            selectedFiles.length && !isProcessing && scanState !== "scanning"                                                                                   
+              ? "border border-black text-black hover:bg-gray-100"                                                                                              
+              : "border border-gray-300 text-gray-500 cursor-not-allowed"                                                                                       
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          {scanState === "scanning" ? "Scanning..." : "Scan Files"}                                                                                             
+        </button>                                                                                                                                               
+                                                                                                                                                                
+        <button                                                                                                                                                 
+          type="button"                                                                                                                                         
+          onClick={handleProcessFile}                                                                                                                           
+          disabled={                                                                                                                                            
+            !selectedFiles.length ||                                                                                                                            
+            scanState !== "clean" ||                                                                                                                            
+            isProcessing ||                                                                                                                                     
+            (toolId === "pdf-protect" && !protectPassword.trim()) ||                                                                                            
+            (toolId === "pdf-delete-pages" && !deletePagesInput.trim()) ||                                                                                      
+            (toolId === "pdf-page-reorder" && !reorderPagesInput.trim()) ||
+            (toolId === "pdf-watermark" && !watermarkText.trim()) ||                                                                                            
+            (toolId === "pdf-password-remover" && !passwordRemoverPassword.trim())                                                                              
+          }
+          className={`w-full sm:flex-1 py-3 rounded-lg text-sm font-medium transition ${                                                                        
+            selectedFiles.length && !isProcessing && scanState === "clean"                                                                                      
+              ? "bg-black text-white hover:bg-gray-800"                                                                                                         
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"                                                                                                  
+          }`}                                                                                                                                                   
+        >                                                                                                                                                       
+          {isProcessing ? "Processing..." : "Confirm & Continue"}                                                                                               
+        </button>                                                                                                                                               
+      </div>                                                                                                                                                    
+    </div>                                                                                                                                                      
+  )}                                                                                                                                                            
+                                                                                                                                                                
+  {!selectedFiles.length && fileError && (                                                                                                                      
+    <p className="mt-3 text-sm text-red-600">{fileError}</p>                                                                                                    
+  )}

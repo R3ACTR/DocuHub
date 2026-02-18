@@ -4,7 +4,8 @@ import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 import Navbar from "@/components/Navbar";
-import { Toaster } from "sonner"; // ✅ ADDED (Sonner Import)
+import { Toaster } from "sonner";
+import { ThemeProvider } from "@/components/ThemeProvider";
 
 const geistSans = localFont({
   variable: "--font-geist-sans",
@@ -30,15 +31,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        <Header />
-        <Navbar />
-        {children}
-        <Footer />
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <ThemeProvider>
+          <Header />
+          <Navbar />
+          {children}
+          <Footer />
+        </ThemeProvider>
 
-        {/* ✅ ADDED — Global Toast Provider */}
         <Toaster position="top-right" richColors />
       </body>
     </html>

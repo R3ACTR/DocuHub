@@ -3,7 +3,6 @@
 import { FileText, ArrowLeftRight, ScanText, LayoutGrid } from "lucide-react";
 import Link from "next/link";
 import { FeatureCard } from "@/components/FeatureCard";
-import { toast } from "sonner";
 
 const features = [
   {
@@ -34,16 +33,6 @@ export default function Home() {
 
       <main className="flex-1">
 
-        {/* ✅ Toast Test Button */}
-        <div className="p-4 flex justify-center">
-          <button
-            onClick={() => toast.success("Toast Working ✅")}
-            className="px-4 py-2 bg-black text-white rounded"
-          >
-            Test Toast
-          </button>
-        </div>
-
         {/* Banner moved to Global Header */}
 
         {/* Hero Content */}
@@ -53,7 +42,7 @@ export default function Home() {
           <div className="mb-20 w-full flex justify-center">
             <Link
               href="/dashboard"
-              className="inline-flex items-center justify-center h-14 px-8 rounded-xl bg-[#1e1e2e] text-white font-medium text-lg hover:bg-[#1e1e2e]/90 transition-transform hover:scale-105 shadow-lg"
+              className="inline-flex items-center justify-center h-14 px-8 rounded-xl bg-primary text-primary-foreground font-medium text-lg hover:opacity-90 transition-transform hover:scale-105 shadow-lg"
             >
               Get Started
             </Link>
@@ -82,3 +71,4 @@ export default function Home() {
     </div>
   );
 }
+

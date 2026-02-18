@@ -8,17 +8,23 @@ let storedFiles: {
   password?: string;
 }[] = [];
 
+export type StoreFilesResult = {
+  ok: boolean;
+  error?: string;
+};
+
 export async function storeFiles(
   files: File[],
   options?: { password?: string }
-): Promise<boolean> {
+): Promise<StoreFilesResult> {
   try {
-    // ✅ MAX FILE COUNT LIMIT
     const MAX_FILES = 10;
 
     if (files.length > MAX_FILES) {
-      alert(`You can upload a maximum of ${MAX_FILES} files.`);
-      return false;
+      return {
+        ok: false,
+        error: `You can upload up to ${MAX_FILES} files.`,
+      };
     }
 
     const { cleanFiles, threats } = await scanUploadedFiles(files);
@@ -59,9 +65,12 @@ export async function storeFiles(
     );
 
     storedFiles = results;
-    return true;
+    return { ok: true };
   } catch {
-    return false;
+    return {
+      ok: false,
+      error: "Failed to prepare files for processing.",
+    };
   }
 }
 
